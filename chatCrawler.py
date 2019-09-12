@@ -1,4 +1,5 @@
-# self made crawler to copy/download a partiular chat
+# self made crawler to copy/download a partiular chat and gather some data about it
+# creates a json file with data about the chat
 
 import userinfo
 import fbchat
@@ -24,6 +25,56 @@ def localTimeIsUTC():
     nowutcformated = nowutc.strftime("%A %m/%d/%Y %H:%M")
 
     return (nowformated == nowutcformated)  # if equal, local time is utc
+
+
+def makeMessageJSON(messsageObj):
+    # NOTE: not perfect since some fields have their own class that I'm not taking into consideration
+    # reaction objects originally have the person who reacted and what reaction. Now instead of the object, I make it  list of tuples
+    # attachment is either true or false in the returned dict instead of object
+    # attachment is either true or false in the returned dict instead of object
+    # some fields will be missing from the original
+
+    msg = {}
+    msg["text"] = messsageObj.text
+    msg["mentions"] = len(messsageObj.mentions) > 0  # if there are mentions or not
+    msg["uid"] = messsageObj.uid
+    msg["author"] = messsageObj.author
+    msg["timestamp"] = messsageObj.timestamp
+    msg["is_read"] = str(messsageObj.is_read)
+    msg["read_by"] = messsageObj.read_by  # list
+    msg["unsent"] = str(messsageObj.unsent)
+
+    msg["attachments"] = len(messsageObj.attachments) > 0  # if  empty list or not
+
+    # for reactions, must make the value in the dict not an object
+    # ex. MessageReaction.WOW -> WOW
+    reactKeys = messsageObj.reactions.keys()
+    newReactDict = {}
+    if len(reactKeys) > 0:  # has reactions. Makes into a list of tuples
+        for k in reactKeys:
+            # find coresponding value
+            val = messsageObj.reactions[k]
+            newval = None
+
+            if val is fbchat.MessageReaction.LOVE:
+                newval = "LOVE"
+            elif val is fbchat.MessageReaction.SMILE:
+                newval = "SMILE"
+            elif val is fbchat.MessageReaction.WOW:
+                newval = "WOW"
+            elif val is fbchat.MessageReaction.SAD:
+                newval = "SAD"
+            elif val is fbchat.MessageReaction.ANGRY:
+                newval = "ANGRY"
+            elif val is fbchat.MessageReaction.YES:
+                newval = "YES"
+            elif val is fbchat.MessageReaction.NO:
+                newval = "NO"
+
+            newReactDict[k] = newval
+
+        msg["reactions"] = newReactDict
+    return msg
 
 
 class CustomClient(fbchat.Client):
@@ -64,31 +115,59 @@ def beginCrawl(outfile):
     targetChatName = targetChat["Name"]
     targetData = {}
 
+    # init targetData
+    targetData["messageCount"] = 0
+    targetData["messages"] = []  # all the messages; raw messages (Message objects from fbchat)
+    targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
+    targetChat["attachments"] = {"count": 0, "sources": {}}  # sources is the source and count per source
+    targetChat["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
+    targetChat["timestamps"] = []  # [(timestamp, author)...]
+    targetChat["mentions"] = {}  # {total count, mentionedID: {count for mentioned, who mentionedID/Name}}
+    targetChat["reactions"] = {}  # {total count, reactions and their count, reactorsID: {count for reactor, reactions and their count}
+    targetChat["topXwords"] = {}  # {word: count}
+
     # fetch a `Thread` object
     thread = client.fetchThreadInfo(targetChatId)[targetChatId]
     targetData["messageCount"] = thread.message_count
 
     # begin crawl
-    safetyLimit = 10  # number of messages to get before stopping. Put message_count for all
-    topXwords = 10  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-    stopwords = nltk.corpus.stopwords.words("english")
+    safetyLimit = 20  # number of messages to get before stopping. Put message_count for all
 
     # Gets the last x messages sent to the thread
     messages = client.fetchThreadMessages(thread_id=targetChatId, limit=safetyLimit)
-    # Since the message come in reversed order, reverse them
+    #  message come in reversed order, reverse them
     messages.reverse()
-    targetData["messages"] = messages
-    targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
-    targetChat["attachments"] = {"count": 0, "sources": {}}  # sources is the source and count per source
-    targetChat["unsent"] = {"amount": 0, "authors": {}, messageIds: []}
-    targetChat["timestamps"] = []  # [(timestamp, author)...]
-    targetChat["mentions"] = {}  # {mentionedID: {count for mentioned, who mentionedID/Name}}
-    targetChat["topXwords"] = {}  # {word: count}
 
+    xwords = 10  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
+    stopwords = nltk.corpus.stopwords.words("english")
+
+    # process every message
     for message in messages:  # process all the messages
+        print(message)
+        msgtextOrig = message.text
+        # print(msgtextOrig)
+        msgtext = message.text
 
-        print(message.text)
+        # make Message object JSON serializable
+        msgJSON = makeMessageJSON(message)
+        targetData["messages"].append(msgJSON)
 
+        # update authors
+
+        # update attachments
+
+        # update unsent
+
+        # update timetamps
+
+        # update mentions
+
+        # update reactions
+
+        # update top x words (most complicated if done efficiently)
+        # remove stop words
+
+    # print out the data
     print("\n\n  |================|")
     print("  |======DATA======|")
     print("  V================V\n\n")
@@ -96,7 +175,7 @@ def beginCrawl(outfile):
 
     print("\n\n written to file %s\n" % (outfile))
     with open(outfile, 'w') as outfile:
-        json.dump(targetData, outfile)
+        json.dump(targetData, outfile, indent=4)
     client.logout()
 
 

@@ -169,7 +169,7 @@ def findTargetId(client, targetChatId, targetChatName):
     return targetChatId
 
 
-def beginCrawl(outfile, pprintFile, xwords, numberMessages):
+def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists):
     # start the fbchat client
     userEmail = userinfo.email
     userPassword = userinfo.pw
@@ -212,7 +212,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
     targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: count for reactions}
     targetData[topXField] = {}  # {word: count}
-    targetData["wordCount"] = {}  # {authorid: {authorname, total words from cleaned string}}; cleaning removes some words so this isn't 100% right
+    targetData["wordCount"] = {"count": 0}  # {authorid: {authorname, total words from cleaned string}}; this isn't 100% right
 
     # fetch a `Thread` object
     thread = client.fetchThreadInfo(targetChatId)[targetChatId]
@@ -251,10 +251,13 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
         existingAuthorDict = targetData["authors"].get(authorId)  # returns None if doesnt exist
         if existingAuthorDict is None:
             # create new entry
-            targetData["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1, "msgIdList": [muid]}
+            targetData["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1}
+            if createMessageIdLists:
+                targetData["authors"][authorId]["msgIdList"] = [muid]
         else:
             # update existing entry
-            targetData["authors"][authorId]["msgIdList"].append(muid)
+            if createMessageIdLists:
+                targetData["authors"][authorId]["msgIdList"].append(muid)
             targetData["authors"][authorId]["count"] += 1
 
         # ## update attachments
@@ -281,10 +284,13 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
             currDict = targetData["unsent"]["authors"].get(authorId)  # returns None if doesnt exist
             if currDict is None:
                 # create new entry
-                targetData["unsent"]["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1, "msgIdList": [muid]}
+                targetData["unsent"]["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1}
+                if createMessageIdLists:
+                    targetData["unsent"]["authors"][authorId]["msgIdList"] = [muid]
             else:
                 # update existing
-                targetData["unsent"]["authors"][authorId]["msgIdList"].append(muid)
+                if createMessageIdLists:
+                    targetData["unsent"]["authors"][authorId]["msgIdList"].append(muid)
                 targetData["unsent"]["authors"][authorId]["count"] += 1
 
             targetData["unsent"]["messageIds"].append(muid)
@@ -341,6 +347,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
         # {authorid: {authorname, total words from cleaned string}}
         msgTextClean = msgTextClean.strip().lower()
         msgWordCount = len(msgTextClean.split())
+        targetData["wordCount"]["count"] += msgWordCount
         currDict = targetData["wordCount"].get(authorId)
         if currDict is None:
             # create new entry
@@ -387,9 +394,10 @@ starttime = str(datetime.datetime.now())
 # chatdata.json
 outfile = "chatdata.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout
+createMessageIdLists = False  # to make message id lists for authors and unsent  (If True, json file can get large)
 xwords = 30  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
 numberMessages = 20  # None to do all messages
-beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages)
+beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages, createMessageIdLists=createMessageIdLists)
 
 
 endtime = str(datetime.datetime.now())

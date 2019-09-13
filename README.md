@@ -42,6 +42,8 @@ There are a couple lines at the bottom that act as the "Settings".
 
 Note: As of now, There are errors when trying to get a lot of messages (10000+)
 
+`createMessageIdLists` make message id lists for authors and unsent  (If True, json file can get large).
+
 
 ### Output
 

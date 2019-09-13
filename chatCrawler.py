@@ -27,9 +27,34 @@ def localTimeIsUTC():
     return (nowformated == nowutcformated)  # if equal, local time is utc
 
 
+# helper helper method
+
+def getReactionType(message, userid):
+    # find coresponding value
+    val = message.reactions[userid]
+    newval = None
+
+    if val is fbchat.MessageReaction.LOVE:
+        newval = "LOVE"
+    elif val is fbchat.MessageReaction.SMILE:
+        newval = "SMILE"
+    elif val is fbchat.MessageReaction.WOW:
+        newval = "WOW"
+    elif val is fbchat.MessageReaction.SAD:
+        newval = "SAD"
+    elif val is fbchat.MessageReaction.ANGRY:
+        newval = "ANGRY"
+    elif val is fbchat.MessageReaction.YES:
+        newval = "YES"
+    elif val is fbchat.MessageReaction.NO:
+        newval = "NO"
+
+    return newval
+
+
 def makeMessageJSON(messsageObj):
     # NOTE: not perfect since some fields have their own class that I'm not taking into consideration
-    # reaction objects originally have the person who reacted and what reaction. Now instead of the object, I make it  list of tuples
+    # reaction originally was a dict with the reactor and the reaction object. now its just a dict with the reactor and the type as a string
     # attachment is either true or false in the returned dict instead of object
     # attachment is either true or false in the returned dict instead of object
     # some fields will be missing from the original
@@ -51,29 +76,10 @@ def makeMessageJSON(messsageObj):
     reactKeys = messsageObj.reactions.keys()
     newReactDict = {}
     if len(reactKeys) > 0:  # has reactions. Makes into a list of tuples
-        for k in reactKeys:
-            # find coresponding value
-            val = messsageObj.reactions[k]
-            newval = None
+        for reactorid in reactKeys:
+            newReactDict[reactorid] = getReactionType(messsageObj, reactorid)
 
-            if val is fbchat.MessageReaction.LOVE:
-                newval = "LOVE"
-            elif val is fbchat.MessageReaction.SMILE:
-                newval = "SMILE"
-            elif val is fbchat.MessageReaction.WOW:
-                newval = "WOW"
-            elif val is fbchat.MessageReaction.SAD:
-                newval = "SAD"
-            elif val is fbchat.MessageReaction.ANGRY:
-                newval = "ANGRY"
-            elif val is fbchat.MessageReaction.YES:
-                newval = "YES"
-            elif val is fbchat.MessageReaction.NO:
-                newval = "NO"
-
-            newReactDict[k] = newval
-
-        msg["reactions"] = newReactDict
+    msg["reactions"] = newReactDict
     return msg
 
 
@@ -141,7 +147,7 @@ def beginCrawl(outfile, pprintFile):
     targetData["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
     targetData["timestamps"] = []  # [{timestamp, authorid and name}...]
     targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
-    targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: {count for reactor, reactions and their count}
+    targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: count for reactions}
     targetData["topXwords"] = {}  # {word: count}
 
     # fetch a `Thread` object
@@ -238,9 +244,22 @@ def beginCrawl(outfile, pprintFile):
                 # update existing
                 targetData["mentions"][mentionedId]["count"] += 1
                 currcount = targetData["mentions"][mentionedId]["mentionedBy"].get(authorId, 0)  # return 0 if not there
-                targetData["mentions"][mentionedId]["mentionedBy"][authorId] += 1
+                targetData["mentions"][mentionedId]["mentionedBy"][authorId] = currcount + 1
 
         # ## update reactions
+        # {"count": 0}  {total count, reactions and their count,reactorsID: count for reactions}
+        reactionsDict = message.reactions
+        reactionsDictKeys = reactionsDict.keys()
+        if len(reactionsDictKeys) > 0:  # has reactions. Makes into a list of tuples
+            for reactorid in reactionsDictKeys:
+                targetData["reactions"]["count"] += 1
+                reactiontype = getReactionType(message, reactorid)
+                currcount = targetData["reactions"].get(reactiontype, 0)  # 0 if not there
+                targetData["reactions"][reactiontype] = currcount + 1
+
+                # how many times has this person made a reaction
+                currcount = targetData["reactions"].get(reactorid, 0)
+                targetData["reactions"][reactorid] = currcount + 1
 
         # ## update top x words (most complicated if done efficiently)
         # remove stop words

@@ -66,7 +66,7 @@ Output will come to your console and a file will be created with the name you pr
 
 Look at the output for the full object
 
-
+```
 {
     "messageCount":number,
     "chatName":"name",
@@ -82,7 +82,7 @@ Look at the output for the full object
     "topXwords": {word: count, .......}
     
 }
-
+```
 
 NOTE: "topXwords" is not the actual field. X is replaced by the number you put in `xwords` to make "top10words" or "top124words", etc
 

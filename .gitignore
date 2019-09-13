@@ -4,3 +4,4 @@ userinfo.py
 *.pyc
 *.txt
 *.json
+!lotsofwords.txt

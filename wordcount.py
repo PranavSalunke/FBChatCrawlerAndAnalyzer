@@ -10,9 +10,13 @@ import pprint
 
 stopwords = nltk.corpus.stopwords.words("english")
 punct = string.punctuation
+X = 10
 
 
 def cleanStr(line):
+    # remove non ascii
+    line = line.encode("ascii", "namereplace")
+    line = line.decode("ascii")
     # remove punctuation
     punctPattern = re.compile('[%s]' % re.escape(string.punctuation))
     line = re.sub(punctPattern, "", line)
@@ -22,8 +26,6 @@ def cleanStr(line):
     for word in splitline:
         if word not in stopwords:
             cleanedline.append(word)
-        else:
-            print(word)
 
     return " ".join(cleanedline)
 
@@ -43,6 +45,10 @@ def method1():
                 currcount = wordsDict.get(word, 0)
                 wordsDict[word] = currcount + 1
 
+    # sort the values now. result is a list of tuples
+    sortedlist = sorted(wordsDict.items(), reverse=True, key=lambda pair: pair[1])
+    topX = sortedlist[0:X]
+    print(topX)
     # pprint.pprint(wordsDict)
 
 
@@ -50,4 +56,4 @@ startime = str(datetime.datetime.now())
 print("start: %s" % (startime))
 method1()
 print("start: %s" % (startime))
-print("end: " + str(datetime.datetime.now())
+print("end: " + str(datetime.datetime.now()))

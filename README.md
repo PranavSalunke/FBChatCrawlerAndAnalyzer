@@ -16,11 +16,11 @@ There are some errors that are thrown when trying to get lots of messages. I hav
 There are two main files part of this project: `chatCrawler.py` and `userinfo.py`.
 
 
-`userinfo.py` is the one with your login information and the chat details you want to analyze. This contains important info and is *not* tracked by git. You can find what you need to fill out in `userinfo_template.py`. Make sure to rename it when filled.
-The Name works to find the chat id if it is a name of a single person. If you want to find the Id of a group you have to do that a different way.
+`userinfo.py` is the one with your login information and the chat details you want to analyze. This file has important information and is *not* tracked by git. You can find what you need to fill out in `userinfo_template.py`. Make sure to rename it when filled.
+If you do not know the Id of the person or group, just put that as `None` and put the name of the person or group. The script will find the id for you and continue on.
 
 
-`chatCrawler.py` is the bulk (...100%) of this project. It does some checks, and things but as a user, you just need to think about these few lines at the bottom. 
+`chatCrawler.py` is the bulk (...99%) of this project. It does some checks, and things but as a user, you just need to think about these few lines at the bottom. 
 
 
 ### Modifications needed for you to use this
@@ -40,9 +40,12 @@ There are a couple lines at the bottom that act as the "Settings".
 `numberMessages` The number of messages to read. Put `None` to read the entire chat. It reads from bottom to top, but is reversed so we see it correctly
 
 
+Note: As of now, There are errors when trying to get a lot of messages (10000+)
+
+
 ### Output
 
-The output is a json file with the name given in the `outfile` variable.  It is created automatically and is overwritten if you run it again with out changing the name. 
+The output is a json file with the name given in the `outfile` variable.  It is created automatically and is overwritten if you run it again without changing the name. 
 
 
 Look below for a basic structure of the json object. 
@@ -80,7 +83,7 @@ Look at the output for the full object
     "mentions" {count, {counts per person mentioned}...}:,
     "reactions": {count, counts per reaction type},
     "topXwords": {word: count, ...}
-    "wordCount": {authorid: {authorname, total words from cleaned string},...}
+    "wordCount": {authorid: {authorname, total words from cleaned messages},...}
     
 }
 ```

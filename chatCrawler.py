@@ -210,6 +210,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
     targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: count for reactions}
     targetData[topXField] = {}  # {word: count}
+    targetData["wordCount"] = {}  # {authorid: {authorname, total words from cleaned string}}; cleaning removes some words so this isn't 100% right
 
     # fetch a `Thread` object
     thread = client.fetchThreadInfo(targetChatId)[targetChatId]
@@ -334,9 +335,21 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
                     currcount = targetData["reactions"][reactorid].get(reactiontype, 0)
                     targetData["reactions"][reactorid][reactiontype] = currcount + 1
 
+        # ## update wordCount
+        # {authorid: {authorname, total words from cleaned string}}
+        msgTextClean = msgTextClean.strip().lower()
+        msgWordCount = len(msgTextClean.split())
+        currDict = targetData["wordCount"].get(authorId)
+        if currDict is None:
+            # create new entry
+            targetData["wordCount"][authorId] = {"authorId": authorId, "authorName": authorName, "count": msgWordCount}
+        else:
+            # update existing
+            targetData["wordCount"][authorId]["count"] += msgWordCount
+
         # ## update top x words (most complicated if done efficiently)
         # put all the lines here to process later
-        wordbag += " " + msgTextClean.strip().lower() + " "
+        wordbag += " " + msgTextClean + " "
 
     # ##now find the top X words
     topX = getTopXWords(wordbag, xwords)

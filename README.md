@@ -73,13 +73,14 @@ Look at the output for the full object
     "chatID":"9999999999",
     "messageCount":100,
     "messages": [{<json-ized Message Object>}, ...],
-    "authors":{authorID:{data}, author2ID:{data}, ....},
+    "authors":{authorID:{data}, author2ID:{data}, ...},
     "attachments": {count: number, <some other counts>},
     "unsent": {count: number, <counts by user>},
-    "timestamps": [{timestamp, authorid, authorname}....],
-    "mentions" {count, {counts per person mentioned}.....}:,
+    "timestamps": [{timestamp, authorid, authorname}...],
+    "mentions" {count, {counts per person mentioned}...}:,
     "reactions": {count, counts per reaction type},
-    "topXwords": {word: count, .......}
+    "topXwords": {word: count, ...}
+    "wordCount": {authorid: {authorname, total words from cleaned string},...}
     
 }
 ```

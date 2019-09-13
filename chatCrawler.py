@@ -5,10 +5,7 @@ import userinfo
 import fbchat
 from fbchat.models import *
 from fbchat import ThreadType
-import random
-import time
 import datetime
-import traceback
 import pprint
 import json
 import nltk
@@ -153,6 +150,25 @@ class CustomClient(fbchat.Client):
         return tempdict
 
 
+def findTargetId(client, targetChatId, targetChatName):
+    if targetChatName is None:
+        print("ERROR: Give target id or name. If you're trying for a group. You must know the ID")
+        client.logout()
+        exit()
+
+    targetObjList = client.searchForThreads(targetChatName)
+    print(targetObjList)
+    if len(targetObjList) > 0:
+        targetChatId = targetObjList[0].uid
+
+    if targetChatId is None:  # still not found
+        print("ERROR: id could not be found by given name. Make sure it is spelled correctly (case matters)")
+        client.logout()
+        exit()
+
+    return targetChatId
+
+
 def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     # start the fbchat client
     userEmail = userinfo.email
@@ -182,21 +198,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     # If id is given, use it. if only name is given, find id
     # this only works with one to one chats and not groups
     if targetChatId is None:
-        if targetChatName is None:
-            print("ERROR: Give target id or name. If you're trying for a group. You must know the ID")
-            client.logout()
-            exit()
-
-        for friendId in frienddict:
-            friendname = frienddict[friendId]
-            if targetChatName == friendname:
-                targetChatId = friendId
-                break  # id has been found
-
-        if targetChatId is None:  # still None, id was not found
-            print("id could not be found by given name. Make sure it is not a Group name")
-            client.logout()
-            exit()
+        targetChatId = findTargetId(client, targetChatId, targetChatName)
 
     # init targetData
     targetData["chatName"] = targetChatName
@@ -342,7 +344,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
         currDict = targetData["wordCount"].get(authorId)
         if currDict is None:
             # create new entry
-            targetData["wordCount"][authorId] = {"authorId": authorId, "authorName": authorName, "count": msgWordCount}
+            targetData["wordCount"][authorId] = {"authorName": authorName, "count": msgWordCount}
         else:
             # update existing
             targetData["wordCount"][authorId]["count"] += msgWordCount

@@ -9,6 +9,8 @@ I call this a crawler very loosely. The summary of this program is that it goes 
 I use the fbchat API to request messages: https://fbchat.readthedocs.io/en/stable/index.html
 
 
+There are some errors that are thrown when trying to get lots of messages. I haven't gotten around to understanding and fixing those yet. It works well for small numbers though! 
+
 ## Details
 
 There are two main files part of this project: `chatCrawler.py` and `userinfo.py`.

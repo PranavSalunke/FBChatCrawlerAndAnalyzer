@@ -293,7 +293,8 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
                     targetData["unsent"]["authors"][authorId]["msgIdList"].append(muid)
                 targetData["unsent"]["authors"][authorId]["count"] += 1
 
-            targetData["unsent"]["messageIds"].append(muid)
+            if createMessageIdLists:
+                targetData["unsent"]["messageIds"].append(muid)
 
         # ## update timetamps
         # [{timestamp, authorid and name}...]

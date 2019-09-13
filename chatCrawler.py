@@ -109,14 +109,15 @@ def getAttachmentType(attachment):
         return None
 
 
-def cleanStr(line, stopwords):
+def cleanStr(line):
     # remove non ascii
-    line = line.encode("ascii", "namereplace")
+    line = line.encode("ascii", "ignore")  # removes non ascii values
     line = line.decode("ascii")
     # remove punctuation
     punctPattern = re.compile('[%s]' % re.escape(string.punctuation))
     line = re.sub(punctPattern, "", line)
     # remove stopwords
+    stopwords = nltk.corpus.stopwords.words("english")
     splitline = line.split()
     cleanedline = []
     for word in splitline:
@@ -124,6 +125,19 @@ def cleanStr(line, stopwords):
             cleanedline.append(word)
 
     return " ".join(cleanedline)
+
+
+def getTopXWords(wordbag, xwords):
+    wordsDict = {}
+    cleanedsplit = cleanStr(wordbag).split()
+
+    for word in cleanedsplit:
+        currcount = wordsDict.get(word, 0)
+        wordsDict[word] = currcount + 1
+
+    # sort the values now. result is a list of tuples
+    sortedlist = sorted(wordsDict.items(), reverse=True, key=lambda pair: pair[1])
+    return sortedlist[0:xwords]
 
 # ========END HELPER METHODS=========
 
@@ -212,12 +226,11 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
 
     # process every message
     wordbag = ""
-    stopwords = nltk.corpus.stopwords.words("english")
     for message in messages:  # process all the messages
         # print(message) # print message object to console
         if message.text is not None:
             msgTextOrig = message.text
-            msgTextClean = cleanStr(message.text, stopwords)  # cleaned
+            msgTextClean = cleanStr(message.text)  # cleaned
         else:
             msgTextOrig = ""
             msgTextClean = ""
@@ -323,22 +336,11 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
 
         # ## update top x words (most complicated if done efficiently)
         # put all the lines here to process later
-        wordbag += msgTextClean
+        wordbag += " " + msgTextClean.strip().lower() + " "
 
     # ##now find the top X words
-    stopwords = nltk.corpus.stopwords.words("english")
-    wordsDict = {}
-    cleanedsplit = cleanStr(wordbag, stopwords).split()
-
-    for word in cleanedsplit:
-        currcount = wordsDict.get(word, 0)
-        wordsDict[word] = currcount + 1
-
-    # sort the values now. result is a list of tuples
-    sortedlist = sorted(wordsDict.items(), reverse=True, key=lambda pair: pair[1])
-    topX = sortedlist[0:xwords]
-    # print(topX)
-    for word in topX:
+    topX = getTopXWords(wordbag, xwords)
+    for word in topX:  # populate data with the words
         targetData[topXField][word[0]] = word[1]
 
     # ##print out the data
@@ -356,7 +358,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     #     with open(pprintFile, "w") as pprintFileObj:
     #         # remove all special characters
     #         pformated = pprint.pformat(targetData)
-    #         pformated = pformated.encode("ascii", "namereplace")
+    #         pformated = pformated.encode("ascii", "ignore")
     #         pformated = pformated.decode("ascii")
     #         # write to file
     #         pprintFileObj.write(pformated)
@@ -367,10 +369,11 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
 # SETTINGS
 starttime = str(datetime.datetime.now())
 
+# chatdata.json
 outfile = "chatdata.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout
-xwords = 10  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-numberMessages = 20  # None to do all messages
+xwords = 30  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
+numberMessages = 500  # None to do all messages
 beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages)
 
 

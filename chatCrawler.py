@@ -140,8 +140,8 @@ def beginCrawl(outfile, pprintFile):
     targetData["attachments"] = {"count": 0, "type": {}, "sharesource": {}}  # total and count per type of attachment. if Share, put source as well
     targetData["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
     targetData["timestamps"] = []  # [{timestamp, authorid and name}...]
-    targetData["mentions"] = {}  # {total count, mentionedID: {count for mentioned, who mentionedID/Name}}
-    targetData["reactions"] = {}  # {total count, reactions and their count, reactorsID: {count for reactor, reactions and their count}
+    targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
+    targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: {count for reactor, reactions and their count}
     targetData["topXwords"] = {}  # {word: count}
 
     # fetch a `Thread` object
@@ -221,6 +221,24 @@ def beginCrawl(outfile, pprintFile):
         targetData["timestamps"].append({"timestamp": msgtimestamp, "authorId": authorId, "authorName": authorName})
 
         # ## update mentions
+        # {"count":, mentionedID: {count for mentioned, who mentionedID and count}}
+        # mentioned is the one who is being mentioned
+        # mentioner is the one doing the mentioning/author (the one who sent the message)
+
+        mentionsList = message.mentions
+        for mention in mentionsList:
+            mentionedId = mention.thread_id
+            targetData["mentions"]["count"] += 1
+
+            currDict = targetData["mentions"].get(mentionedId)  # None if not in the dict yet
+            if currDict is None:
+                # create new entry
+                targetData["mentions"][mentionedId] = {"count": 1, "mentionedBy": {authorId: 1}}
+            else:
+                # update existing
+                targetData["mentions"][mentionedId]["count"] += 1
+                currcount = targetData["mentions"][mentionedId]["mentionedBy"].get(authorId, 0)  # return 0 if not there
+                targetData["mentions"][mentionedId]["mentionedBy"][authorId] += 1
 
         # ## update reactions
 
@@ -233,7 +251,7 @@ def beginCrawl(outfile, pprintFile):
     print("  V================V\n\n")
     pprint.pprint(targetData, indent=4)
 
-    print("\n\n written to file %s\n" % (outfile))
+    print("\n\n===>  written to file %s  <===\n" % (outfile))
     with open(outfile, 'w') as outfile:
         json.dump(targetData, outfile, indent=4)
 

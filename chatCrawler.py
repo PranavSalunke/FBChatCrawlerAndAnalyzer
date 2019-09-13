@@ -90,7 +90,7 @@ class CustomClient(fbchat.Client):
     # ==========HELPER METHODS==========
 
 
-def beginCrawl(outfile):
+def beginCrawl(outfile, pprintFile):
     # start the fbchat client
     userEmail = userinfo.email
     userPassword = userinfo.pw
@@ -117,7 +117,7 @@ def beginCrawl(outfile):
 
     # init targetData
     targetData["messageCount"] = 0
-    targetData["messages"] = []  # all the messages; raw messages (Message objects from fbchat)
+    targetData["messages"] = []  # all the messages; raw messages (Message objects from fbchat converted into dicts)
     targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
     targetChat["attachments"] = {"count": 0, "sources": {}}  # sources is the source and count per source
     targetChat["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
@@ -144,27 +144,38 @@ def beginCrawl(outfile):
     # process every message
     for message in messages:  # process all the messages
         print(message)
-        msgtextOrig = message.text
-        # print(msgtextOrig)
-        msgtext = message.text
+        msgTextOrig = message.text
+        msgText = message.text  # will be modified
+        muid = message.uid
 
-        # make Message object JSON serializable
+        # ## make Message object JSON serializable
         msgJSON = makeMessageJSON(message)
         targetData["messages"].append(msgJSON)
 
-        # update authors
+        # ## update authors
+        authorId = message.author  # gives id
+        authorName = frienddict[authorId]
+        existingAuthorDict = targetData["authors"].get(authorId)  # returns None if doesnt exist
+        #  {authorid: {authorid, author name, count, [list of messageIds]}}
+        if existingAuthorDict is None:
+            # create new entry
+            targetData["authors"][authorId] = {"id": authorId, "name": authorName, "count": 1, "msgList": [muid]}
+        else:
+            # update existing entry
+            targetData["authors"][authorId]["msgList"].append(muid)
+            targetData["authors"][authorId]["count"] += 1
 
-        # update attachments
+        # ## update attachments
 
-        # update unsent
+        # ## update unsent
 
-        # update timetamps
+        # ## update timetamps
 
-        # update mentions
+        # ## update mentions
 
-        # update reactions
+        # ## update reactions
 
-        # update top x words (most complicated if done efficiently)
+        # ## update top x words (most complicated if done efficiently)
         # remove stop words
 
     # print out the data
@@ -172,6 +183,9 @@ def beginCrawl(outfile):
     print("  |======DATA======|")
     print("  V================V\n\n")
     pprint.pprint(targetData)
+    if pprintFile is not None:
+        with open(pprintFile, "w") as pprintFileObj:
+            pprint.pprint(targetData, pprintFileObj)
 
     print("\n\n written to file %s\n" % (outfile))
     with open(outfile, 'w') as outfile:
@@ -180,4 +194,5 @@ def beginCrawl(outfile):
 
 
 outfile = "chatdata.json"  # will be overwritten
-beginCrawl(outfile=outfile)
+pprintFile = "chatdataPPrint.txt"  # None to print to stdout
+beginCrawl(outfile=outfile, pprintFile=pprintFile)

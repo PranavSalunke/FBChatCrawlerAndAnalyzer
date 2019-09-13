@@ -187,7 +187,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
         session_cookies = client.getSession()
         cookies.write("%s\n" % (session_cookies))
 
-    frienddict = client.buildFrienddict()  # can do frienddict["id"] to get the name of the user with that id
+    frienddict = client.buildFrienddict()  # can do frienddict.get("id") to get the name of the user with that id
 
     topXField = "top%dwords" % (xwords)  # make this top10words or top42words, etc
     targetChat = userinfo.targetChat
@@ -240,7 +240,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
 
         muid = message.uid
         authorId = message.author  # gives id
-        authorName = frienddict[authorId]
+        authorName = frienddict.get(authorId, "not_in_friend_list")
 
         # ## make Message object JSON serializable
         msgJSON = makeMessageJSON(message)
@@ -329,7 +329,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
                 currDict = targetData["reactions"].get(reactorid)  # none if not there
                 if currDict is None:
                     # make new entry
-                    reactorName = frienddict[reactorid]
+                    reactorName = frienddict.get(reactorid, "not_in_friend_list")
                     targetData["reactions"][reactorid] = {"count": 1, reactiontype: 1, "reactorID": reactorid, "reactorName": reactorName}
                 else:
                     # update entry

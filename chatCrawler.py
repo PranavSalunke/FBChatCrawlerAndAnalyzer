@@ -215,8 +215,13 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     stopwords = nltk.corpus.stopwords.words("english")
     for message in messages:  # process all the messages
         # print(message) # print message object to console
-        msgTextOrig = message.text
-        msgTextClean = cleanStr(message.text, stopwords)  # cleaned
+        if message.text is not None:
+            msgTextOrig = message.text
+            msgTextClean = cleanStr(message.text, stopwords)  # cleaned
+        else:
+            msgTextOrig = ""
+            msgTextClean = ""
+
         muid = message.uid
         authorId = message.author  # gives id
         authorName = frienddict[authorId]

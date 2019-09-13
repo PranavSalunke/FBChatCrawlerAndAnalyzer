@@ -139,7 +139,7 @@ def beginCrawl(outfile, pprintFile):
     targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
     targetData["attachments"] = {"count": 0, "type": {}, "sharesource": {}}  # total and count per type of attachment. if Share, put source as well
     targetData["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
-    targetData["timestamps"] = []  # [(timestamp, author)...]
+    targetData["timestamps"] = []  # [{timestamp, authorid and name}...]
     targetData["mentions"] = {}  # {total count, mentionedID: {count for mentioned, who mentionedID/Name}}
     targetData["reactions"] = {}  # {total count, reactions and their count, reactorsID: {count for reactor, reactions and their count}
     targetData["topXwords"] = {}  # {word: count}
@@ -166,6 +166,7 @@ def beginCrawl(outfile, pprintFile):
         msgText = message.text  # will be modified
         muid = message.uid
         authorId = message.author  # gives id
+        authorName = frienddict[authorId]
 
         # ## make Message object JSON serializable
         msgJSON = makeMessageJSON(message)
@@ -173,11 +174,10 @@ def beginCrawl(outfile, pprintFile):
 
         # ## update authors
         #  {authorid: {authorid, author name, count, [list of messageIds]}}
-        authorName = frienddict[authorId]
         existingAuthorDict = targetData["authors"].get(authorId)  # returns None if doesnt exist
         if existingAuthorDict is None:
             # create new entry
-            targetData["authors"][authorId] = {"id": authorId, "name": authorName, "count": 1, "msgIdList": [muid]}
+            targetData["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1, "msgIdList": [muid]}
         else:
             # update existing entry
             targetData["authors"][authorId]["msgIdList"].append(muid)
@@ -207,8 +207,7 @@ def beginCrawl(outfile, pprintFile):
             currDict = targetData["unsent"]["authors"].get(authorId)  # returns None if doesnt exist
             if currDict is None:
                 # create new entry
-                authorName = frienddict[authorId]
-                targetData["unsent"]["authors"][authorId] = {"id": authorId, "name": authorName, "count": 1, "msgIdList": [muid]}
+                targetData["unsent"]["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1, "msgIdList": [muid]}
             else:
                 # update existing
                 targetData["unsent"]["authors"][authorId]["msgIdList"].append(muid)
@@ -217,6 +216,9 @@ def beginCrawl(outfile, pprintFile):
             targetData["unsent"]["messageIds"].append(muid)
 
         # ## update timetamps
+        # [{timestamp, authorid and name}...]
+        msgtimestamp = message.timestamp  # is in unix epoch time
+        targetData["timestamps"].append({"timestamp": msgtimestamp, "authorId": authorId, "authorName": authorName})
 
         # ## update mentions
 
@@ -229,7 +231,7 @@ def beginCrawl(outfile, pprintFile):
     print("\n\n  |================|")
     print("  |======DATA======|")
     print("  V================V\n\n")
-    pprint.pprint(targetData)
+    pprint.pprint(targetData, indent=4)
 
     print("\n\n written to file %s\n" % (outfile))
     with open(outfile, 'w') as outfile:

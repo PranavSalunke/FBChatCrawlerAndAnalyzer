@@ -254,12 +254,20 @@ def beginCrawl(outfile, pprintFile):
             for reactorid in reactionsDictKeys:
                 targetData["reactions"]["count"] += 1
                 reactiontype = getReactionType(message, reactorid)
-                currcount = targetData["reactions"].get(reactiontype, 0)  # 0 if not there
-                targetData["reactions"][reactiontype] = currcount + 1
+                currcount = targetData["reactions"].get("total" + reactiontype, 0)  # 0 if not there
+                targetData["reactions"]["total" + reactiontype] = currcount + 1
 
                 # how many times has this person made a reaction
-                currcount = targetData["reactions"].get(reactorid, 0)
-                targetData["reactions"][reactorid] = currcount + 1
+                currDict = targetData["reactions"].get(reactorid)  # none if not there
+                if currDict is None:
+                    # make new entry
+                    reactorName = frienddict[reactorid]
+                    targetData["reactions"][reactorid] = {"count": 1, reactiontype: 1, "reactorID": reactorid, "reactorName": reactorName}
+                else:
+                    # update entry
+                    targetData["reactions"][reactorid]["count"] += 1
+                    currcount = targetData["reactions"][reactorid].get(reactiontype, 0)
+                    targetData["reactions"][reactorid][reactiontype] = currcount + 1
 
         # ## update top x words (most complicated if done efficiently)
         # remove stop words

@@ -139,7 +139,7 @@ class CustomClient(fbchat.Client):
         return tempdict
 
 
-def beginCrawl(outfile, pprintFile, xwords):
+def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     # start the fbchat client
     userEmail = userinfo.email
     userPassword = userinfo.pw
@@ -159,13 +159,34 @@ def beginCrawl(outfile, pprintFile, xwords):
 
     frienddict = client.buildFrienddict()  # can do frienddict["id"] to get the name of the user with that id
 
-    topXFeild = "top%dwords" % (xwords)  # make this top10words or top42words, etc
+    topXField = "top%dwords" % (xwords)  # make this top10words or top42words, etc
     targetChat = userinfo.targetChat
     targetChatId = targetChat["Id"]
     targetChatName = targetChat["Name"]
     targetData = {}
 
+    # If id is given, use it. if only name is given, find id
+    # this only works with one to one chats and not groups
+    if targetChatId is None:
+        if targetChatName is None:
+            print("ERROR: Give target id or name. If you're trying for a group. You must know the ID")
+            client.logout()
+            exit()
+
+        for friendId in frienddict:
+            friendname = frienddict[friendId]
+            if targetChatName == friendname:
+                targetChatId = friendId
+                break  # id has been found
+
+        if targetChatId is None:  # still None, id was not found
+            print("id could not be found by given name. Make sure it is not a Group name")
+            client.logout()
+            exit()
+
     # init targetData
+    targetData["chatName"] = targetChatName
+    targetData["chatID"] = targetChatId
     targetData["messageCount"] = 0
     targetData["messages"] = []  # all the messages; raw messages (Message objects from fbchat converted into dicts)
     targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
@@ -174,24 +195,24 @@ def beginCrawl(outfile, pprintFile, xwords):
     targetData["timestamps"] = []  # [{timestamp, authorid and name}...]
     targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
     targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: count for reactions}
-    targetData[topXFeild] = {}  # {word: count}
+    targetData[topXField] = {}  # {word: count}
 
     # fetch a `Thread` object
     thread = client.fetchThreadInfo(targetChatId)[targetChatId]
     targetData["messageCount"] = thread.message_count
 
     # begin crawl
-    safetyLimit = 20  # number of messages to get before stopping. Put message_count for all
+    if numberMessages is None:
+        numberMessages = thread.message_count  # number of messages to get before stopping. Put message_count for all
 
     # Gets the last x messages sent to the thread
-    messages = client.fetchThreadMessages(thread_id=targetChatId, limit=safetyLimit)
+    messages = client.fetchThreadMessages(thread_id=targetChatId, limit=numberMessages)
     #  message come in reversed order, reverse them
     messages.reverse()
 
-    stopwords = nltk.corpus.stopwords.words("english")
-
     # process every message
     wordbag = ""
+    stopwords = nltk.corpus.stopwords.words("english")
     for message in messages:  # process all the messages
         print(message)
         msgTextOrig = message.text
@@ -300,6 +321,7 @@ def beginCrawl(outfile, pprintFile, xwords):
         wordbag += msgTextClean
 
     # ##now find the top X words
+    stopwords = nltk.corpus.stopwords.words("english")
     wordsDict = {}
     cleanedsplit = cleanStr(wordbag, stopwords).split()
 
@@ -312,7 +334,7 @@ def beginCrawl(outfile, pprintFile, xwords):
     topX = sortedlist[0:xwords]
     # print(topX)
     for word in topX:
-        targetData["topXwords"][word[0]] = word[1]
+        targetData[topXField][word[0]] = word[1]
 
     # ##print out the data
     print("\n\n  |================|")
@@ -338,9 +360,13 @@ def beginCrawl(outfile, pprintFile, xwords):
 
 
 starttime = str(datetime.datetime.now())
+
 outfile = "chatdata.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout
 xwords = 10  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords)
+numberMessages = 20  # None to do all messages
+beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages)
+
+
 endtime = str(datetime.datetime.now())
 print("starttime: %s\nendtime %s" % (starttime, endtime))

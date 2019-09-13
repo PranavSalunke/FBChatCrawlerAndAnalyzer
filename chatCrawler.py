@@ -93,20 +93,20 @@ def makeMessageJSON(messsageObj):
 
 def getAttachmentType(attachment):
     # might not have all possibilities. Returns None if type cant be found
-    if attachment is fbchat.ShareAttachment:
-        return "share"
-    elif attachment is fbchat.Sticker:
-        return "sticker"
-    elif attachment is fbchat.FileAttachment:
-        return "file"
-    elif attachment is fbchat.AudioAttachment:
-        return "audio"
-    elif attachment is fbchat.ImageAttachment:
-        return "image"
-    elif attachment is fbchat.VideoAttachment:
-        return "video"
-    else:
-        return None
+    aType = None
+    if isinstance(attachment, fbchat.ShareAttachment):
+        aType = "share"
+    elif isinstance(attachment, fbchat.Sticker):
+        aType = "sticker"
+    elif isinstance(attachment, fbchat.FileAttachment):
+        aType = "file"
+    elif isinstance(attachment, fbchat.AudioAttachment):
+        aType = "audio"
+    elif isinstance(attachment, fbchat.ImageAttachment):
+        aType = "image"
+    elif isinstance(attachment, fbchat.VideoAttachment):
+        aType = "video"
+    return aType
 
 
 def cleanStr(line):
@@ -386,7 +386,7 @@ starttime = str(datetime.datetime.now())
 outfile = "chatdata.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout
 xwords = 30  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-numberMessages = 500  # None to do all messages
+numberMessages = 20  # None to do all messages
 beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages)
 
 

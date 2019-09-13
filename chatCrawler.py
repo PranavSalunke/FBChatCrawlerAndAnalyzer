@@ -214,7 +214,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     wordbag = ""
     stopwords = nltk.corpus.stopwords.words("english")
     for message in messages:  # process all the messages
-        print(message)
+        # print(message) # print message object to console
         msgTextOrig = message.text
         msgTextClean = cleanStr(message.text, stopwords)  # cleaned
         muid = message.uid
@@ -359,6 +359,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages):
     client.logout()
 
 
+# SETTINGS
 starttime = str(datetime.datetime.now())
 
 outfile = "chatdata.json"  # will be overwritten

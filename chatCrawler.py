@@ -77,6 +77,26 @@ def makeMessageJSON(messsageObj):
     return msg
 
 
+def getAttachmentType(attachment):
+    # might not have all possibilities. Returns None if type cant be found
+    if attachment is fbchat.ShareAttachment:
+        return "share"
+    elif attachment is fbchat.Sticker:
+        return "sticker"
+    elif attachment is fbchat.FileAttachment:
+        return "file"
+    elif attachment is fbchat.AudioAttachment:
+        return "audio"
+    elif attachment is fbchat.ImageAttachment:
+        return "image"
+    elif attachment is fbchat.VideoAttachment:
+        return "video"
+    else:
+        return None
+
+# ========END HELPER METHODS=========
+
+
 class CustomClient(fbchat.Client):
     # ==========HELPER METHODS==========
     def buildFrienddict(self):
@@ -86,8 +106,6 @@ class CustomClient(fbchat.Client):
         for user in users:
             tempdict[str(user.uid)] = str(user.name)
         return tempdict
-
-    # ==========HELPER METHODS==========
 
 
 def beginCrawl(outfile, pprintFile):
@@ -119,7 +137,7 @@ def beginCrawl(outfile, pprintFile):
     targetData["messageCount"] = 0
     targetData["messages"] = []  # all the messages; raw messages (Message objects from fbchat converted into dicts)
     targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
-    targetChat["attachments"] = {"count": 0, "sources": {}}  # sources is the source and count per source
+    targetChat["attachments"] = {"count": 0, "type": {}, "sharesource": {}}  # total and count per type of attachment. if Share, put source as well
     targetChat["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
     targetChat["timestamps"] = []  # [(timestamp, author)...]
     targetChat["mentions"] = {}  # {total count, mentionedID: {count for mentioned, who mentionedID/Name}}
@@ -153,10 +171,10 @@ def beginCrawl(outfile, pprintFile):
         targetData["messages"].append(msgJSON)
 
         # ## update authors
+        #  {authorid: {authorid, author name, count, [list of messageIds]}}
         authorId = message.author  # gives id
         authorName = frienddict[authorId]
         existingAuthorDict = targetData["authors"].get(authorId)  # returns None if doesnt exist
-        #  {authorid: {authorid, author name, count, [list of messageIds]}}
         if existingAuthorDict is None:
             # create new entry
             targetData["authors"][authorId] = {"id": authorId, "name": authorName, "count": 1, "msgList": [muid]}
@@ -166,6 +184,18 @@ def beginCrawl(outfile, pprintFile):
             targetData["authors"][authorId]["count"] += 1
 
         # ## update attachments
+        # {"count": 0, "type": {}}  # type of attachment and count per type. if ShareAttachment, put source as well
+        attachmentList = message.attachments
+        for attachment in attachmentList:
+            targetChat["attachments"]["count"] += 1
+            attachmentType = getAttachmentType(attachment)
+            # possible types: "share", "sticker", "file", "audio", "image", "video", None (not a string)
+            currcount = targetChat["attachments"]["type"].get(attachmentType, 0)  # 0 if its not there so far
+            targetChat["attachments"]["type"][attachmentType] = currcount + 1
+
+            if attachmentType == "share":
+                currcount = targetChat["attachments"]["sharesource"].get(attachment.source, 0)
+                targetChat["attachments"]["sharesource"][attachment.source] = currcount+1
 
         # ## update unsent
 
@@ -183,13 +213,20 @@ def beginCrawl(outfile, pprintFile):
     print("  |======DATA======|")
     print("  V================V\n\n")
     pprint.pprint(targetData)
-    if pprintFile is not None:
-        with open(pprintFile, "w") as pprintFileObj:
-            pprint.pprint(targetData, pprintFileObj)
 
     print("\n\n written to file %s\n" % (outfile))
     with open(outfile, 'w') as outfile:
         json.dump(targetData, outfile, indent=4)
+
+    if pprintFile is not None:
+        print("\n pprint output sent to %s" % (pprintFile))
+        with open(pprintFile, "w") as pprintFileObj:
+            # remove all special characters
+            pformated = pprint.pformat(targetData)
+            pformated = pformated.encode("ascii", "namereplace")
+            pformated = pformated.decode("ascii")
+            pprintFileObj.write(pformated)
+
     client.logout()
 
 

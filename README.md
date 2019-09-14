@@ -9,7 +9,7 @@ I call this a crawler very loosely. The summary of this program is that it goes 
 I use the fbchat API to request messages: https://fbchat.readthedocs.io/en/stable/index.html
 
 
-Check below about getting many messages (5000+)
+Check below about getting many messages (10000+)
 
 ## Details
 
@@ -31,16 +31,13 @@ There are a couple lines at the bottom that act as the "Settings".
 `outfile` is the variable in which the name of the json file is kept
 
 
-`pprintFile` is the variable in which the name of the ppprint file is kept. This is essentially the same as the json file and doesn't really do anything
+`pprintFile` is the variable in which the name of the pprint file is kept. This is essentially the same as the json file and doesn't really do anything
 
 
 `xwords` is the number of words you want to look at. For instance if you put 10, it shows you the top 10 most frequently used words in your chat along with how many times
 
 
 `numberMessages` The number of messages to read. Put `None` to read the entire chat. It reads from bottom to top, but is reversed so we see it correctly
-
-
-Note: As of now, There are errors when trying to get a lot of messages (10000+)
 
 `createMessageIdLists` make message id lists for authors and unsent  (If True, json file can get large).
 
@@ -84,7 +81,7 @@ Look at the output for the full object
     "timestamps": [{timestamp, authorid, authorname}...],
     "mentions" {count, {counts per person mentioned}...}:,
     "reactions": {count, counts per reaction type},
-    "topXwords": {word: count, ...}
+    "topXwords": [(word, count), ...]
     "wordCount": {authorid: {authorname, total words from cleaned messages},...}
     
 }

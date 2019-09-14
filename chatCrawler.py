@@ -441,6 +441,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
 # SETTINGS
 starttime = str(datetime.datetime.now())
 
+
 # chatdata.json
 outfile = "chatdata.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout

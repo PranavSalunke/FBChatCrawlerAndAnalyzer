@@ -4,3 +4,5 @@ userinfo.py
 *.pyc
 *.txt
 *.json
+*.html
+*.csv

@@ -159,7 +159,8 @@ def findTargetId(client, targetChatId, targetChatName):
 
 
 def getMessages(client, targetChatId, numberMessages):
-    print("Getting %d messages"%(numberMessages))
+    print("Getting %d messages" % (numberMessages))
+    getMessagesStart = datetime.datetime.now()
     chunkSize = 10000
     allmessages = []
     messagesLeft = numberMessages
@@ -167,10 +168,20 @@ def getMessages(client, targetChatId, numberMessages):
     beforetime = int(time.time())*1000  # *1000 to make it milliseconds like how fbchat returns timestamps
 
     setnum = 1
+    exceptCount = 0
     while messagesLeft > 0:
-        # Gets the last x messages sent to the thread before timestamp
-        messages = client.fetchThreadMessages(thread_id=targetChatId, limit=chunkSize, before=beforetime)
-        #  message come in reversed order, reverse them
+        # Gets the last 10000 messages sent to the thread before timestamp
+        try:
+            messages = client.fetchThreadMessages(thread_id=targetChatId, limit=chunkSize, before=beforetime)
+        except:
+            print("   exception. trying chunk again in 5 seconds")
+            exceptCount += 1
+            if exceptCount > 5:
+                print("ERROR: too many errors (5 tries) when trying ot get messages. stopping")
+                client.logout()
+                exit()
+            time.sleep(5)
+            continue
 
         beforetime = int(messages[-1].timestamp)  # the timestamp is inclusive. So one message will come twice.
         if setnum > 1:
@@ -183,16 +194,16 @@ def getMessages(client, targetChatId, numberMessages):
             if messagesLeft <= 0:
                 break
 
-        if messagesLeft == 0:
-            waittime = 0
-        else:
-            waittime = random.randint(3, 15)
+        waittime = 0 if messagesLeft == 0 else random.randint(3, 15)
+
         print(" Set number %d done. %d more messages to go. Waiting %d sec" % (setnum, messagesLeft, waittime))
         setnum += 1
         time.sleep(waittime)  # sleep so facebook server doesnt get suspicious
 
-    print("Got Messages")
+    print("Got Messages. Reversing list")
     allmessages.reverse()
+    getMessagesEnd = datetime.datetime.now()
+    print("Messages done. Took %s" % (getMessagesEnd-getMessagesStart))
     return allmessages
 
 # ========END HELPER METHODS=========
@@ -403,11 +414,12 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
     for word in topX:  # populate data with the words
         targetData[topXField].append((word[0], word[1]))
 
-    # ##print out the data
-    print("\n\n  |================|")
-    print("  |======DATA======|")
-    print("  V================V\n\n")
-    pprint.pprint(targetData, indent=4)
+    # ##print out the data (if less than 10000 messages)
+    if numberMessages <= 10000:
+        print("\n\n  |================|")
+        print("  |======DATA======|")
+        print("  V================V\n\n")
+        pprint.pprint(targetData, indent=4)
 
     print("\n\n===>  written to file %s  <===\n" % (outfile))
     with open(outfile, 'w') as outfile:
@@ -430,11 +442,11 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
 starttime = str(datetime.datetime.now())
 
 # chatdata.json
-outfile = "chatdata_all.json"  # will be overwritten
+outfile = "chatdata.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout
 createMessageIdLists = False  # to make message id lists for authors and unsent  (If True, json file can get large)
-xwords = 150  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-numberMessages = None  # None to do all messages
+xwords = 30  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
+numberMessages = 20  # None to do all messages
 beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages, createMessageIdLists=createMessageIdLists)
 
 

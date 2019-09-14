@@ -9,8 +9,10 @@ import datetime
 import pprint
 import json
 import nltk
+import time
 import string
 import re
+import random
 #  USE PYTHON 3
 
 
@@ -136,19 +138,6 @@ def getTopXWords(wordbag, xwords):
     sortedlist = sorted(wordsDict.items(), reverse=True, key=lambda pair: pair[1])
     return sortedlist[0:xwords]
 
-# ========END HELPER METHODS=========
-
-
-class CustomClient(fbchat.Client):
-    # ==========HELPER METHODS==========
-    def buildFrienddict(self):
-        users = self.fetchAllUsers()
-        tempdict = {}
-        tempdict[userinfo.uid] = userinfo.name
-        for user in users:
-            tempdict[str(user.uid)] = str(user.name)
-        return tempdict
-
 
 def findTargetId(client, targetChatId, targetChatName):
     if targetChatName is None:
@@ -167,6 +156,57 @@ def findTargetId(client, targetChatId, targetChatName):
         exit()
 
     return targetChatId
+
+
+def getMessages(client, targetChatId, numberMessages):
+    print("Getting %d messages"%(numberMessages))
+    chunkSize = 10000
+    allmessages = []
+    messagesLeft = numberMessages
+
+    beforetime = int(time.time())*1000  # *1000 to make it milliseconds like how fbchat returns timestamps
+
+    setnum = 1
+    while messagesLeft > 0:
+        # Gets the last x messages sent to the thread before timestamp
+        messages = client.fetchThreadMessages(thread_id=targetChatId, limit=chunkSize, before=beforetime)
+        #  message come in reversed order, reverse them
+
+        beforetime = int(messages[-1].timestamp)  # the timestamp is inclusive. So one message will come twice.
+        if setnum > 1:
+            # It is the first message in the new set; remove it
+            messages.pop(0)
+
+        for m in messages:  # check if double counting
+            allmessages.append(m)
+            messagesLeft -= 1
+            if messagesLeft <= 0:
+                break
+
+        if messagesLeft == 0:
+            waittime = 0
+        else:
+            waittime = random.randint(3, 15)
+        print(" Set number %d done. %d more messages to go. Waiting %d sec" % (setnum, messagesLeft, waittime))
+        setnum += 1
+        time.sleep(waittime)  # sleep so facebook server doesnt get suspicious
+
+    print("Got Messages")
+    allmessages.reverse()
+    return allmessages
+
+# ========END HELPER METHODS=========
+
+
+class CustomClient(fbchat.Client):
+    # ==========HELPER METHODS==========
+    def buildFrienddict(self):
+        users = self.fetchAllUsers()
+        tempdict = {}
+        tempdict[userinfo.uid] = userinfo.name
+        for user in users:
+            tempdict[str(user.uid)] = str(user.name)
+        return tempdict
 
 
 def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists):
@@ -211,7 +251,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
     targetData["timestamps"] = []  # [{timestamp, authorid and name}...]
     targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
     targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: count for reactions}
-    targetData[topXField] = {}  # {word: count}
+    targetData[topXField] = []  # [(word, count),...]
     targetData["wordCount"] = {"count": 0}  # {authorid: {authorname, total words from cleaned string}}; this isn't 100% right
 
     # fetch a `Thread` object
@@ -222,10 +262,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
     if numberMessages is None:
         numberMessages = thread.message_count  # number of messages to get before stopping. Put message_count for all
 
-    # Gets the last x messages sent to the thread
-    messages = client.fetchThreadMessages(thread_id=targetChatId, limit=numberMessages)
-    #  message come in reversed order, reverse them
-    messages.reverse()
+    messages = getMessages(client, targetChatId, numberMessages)
 
     # process every message
     wordbag = ""
@@ -298,7 +335,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
 
         # ## update timetamps
         # [{timestamp, authorid and name}...]
-        msgtimestamp = message.timestamp  # is in unix epoch time
+        msgtimestamp = int(message.timestamp)  # is in unix epoch time
         targetData["timestamps"].append({"timestamp": msgtimestamp, "authorId": authorId, "authorName": authorName})
 
         # ## update mentions
@@ -364,7 +401,7 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
     # ##now find the top X words
     topX = getTopXWords(wordbag, xwords)
     for word in topX:  # populate data with the words
-        targetData[topXField][word[0]] = word[1]
+        targetData[topXField].append((word[0], word[1]))
 
     # ##print out the data
     print("\n\n  |================|")
@@ -393,13 +430,13 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
 starttime = str(datetime.datetime.now())
 
 # chatdata.json
-outfile = "chatdata.json"  # will be overwritten
+outfile = "chatdata_all.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout
 createMessageIdLists = False  # to make message id lists for authors and unsent  (If True, json file can get large)
-xwords = 30  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-numberMessages = 20  # None to do all messages
+xwords = 150  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
+numberMessages = None  # None to do all messages
 beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages, createMessageIdLists=createMessageIdLists)
 
 
 endtime = str(datetime.datetime.now())
-print("starttime: %s\nendtime %s" % (starttime, endtime))
+print("Script Starttime: %s\nScript Endtime:   %s" % (starttime, endtime))

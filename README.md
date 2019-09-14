@@ -9,7 +9,7 @@ I call this a crawler very loosely. The summary of this program is that it goes 
 I use the fbchat API to request messages: https://fbchat.readthedocs.io/en/stable/index.html
 
 
-There are some errors that are thrown when trying to get lots of messages. I haven't gotten around to understanding and fixing those yet. It works well for small numbers though! 
+Check below about getting many messages (5000+)
 
 ## Details
 
@@ -92,6 +92,11 @@ Look at the output for the full object
 
 NOTE: "topXwords" is not the actual field. X is replaced by the number you put in `xwords` to make "top10words" or "top124words", etc
 
+
+### Many messages
+I have now fixed the issue of getting stuck when asking for a lot of messages by getting them in chunks. However, so that the requests do not look suspicious, there is a delay of 3-15 seconds in between chunks. Each chunk is 10000 messages. It does stop early if you ask for less than 10000, or a number not a multiple of 10000. You can change the chunk size in the `getMessages`method.
+
+The larger the number of total messages you are trying to get, the more time you may have to wait. The progress is displayed onto the console. 
 
 ## Inspiration
 

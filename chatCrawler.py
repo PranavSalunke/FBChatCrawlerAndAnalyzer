@@ -438,16 +438,15 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
     client.logout()
 
 
-# SETTINGS
 starttime = str(datetime.datetime.now())
 
 
-# chatdata.json
+# SETTINGS
 outfile = "chatdata.json"  # will be overwritten
 pprintFile = "chatdataPPrint.txt"  # None to print to stdout
 createMessageIdLists = False  # to make message id lists for authors and unsent  (If True, json file can get large)
-xwords = 30  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-numberMessages = 20  # None to do all messages
+xwords = 100  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
+numberMessages = 100  # None to do all messages
 beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages, createMessageIdLists=createMessageIdLists)
 
 

@@ -23,6 +23,9 @@ If you do not know the Id of the person or group, just put that as `None` and pu
 `chatCrawler.py` is the bulk (...99%) of this project. It does some checks, and things but as a user, you just need to think about these few lines at the bottom. 
 
 
+Check other functions below for more scripts that works off the json created by the crawler.
+
+
 ### Modifications needed for you to use this
 
 There are a couple lines at the bottom that act as the "Settings". 
@@ -94,6 +97,15 @@ NOTE: "topXwords" is not the actual field. X is replaced by the number you put i
 I have now fixed the issue of getting stuck when asking for a lot of messages by getting them in chunks. However, so that the requests do not look suspicious, there is a delay of 3-15 seconds in between chunks. Each chunk is 10000 messages. It does stop early if you ask for less than 10000, or a number not a multiple of 10000. You can change the chunk size in the `getMessages`method.
 
 The larger the number of total messages you are trying to get, the more time you may have to wait. The progress is displayed onto the console. 
+
+## Other functions
+
+
+### chatTextExtractor.py
+
+
+This script makes a file with the messages in the json file. This is a good way to get a text-only version. A couple settings a the bottom. 
+
 
 ## Inspiration
 

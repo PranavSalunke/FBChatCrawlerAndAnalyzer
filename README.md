@@ -34,9 +34,6 @@ There are a couple lines at the bottom that act as the "Settings".
 `outfile` is the variable in which the name of the json file is kept
 
 
-`pprintFile` is the variable in which the name of the pprint file is kept. This is essentially the same as the json file and doesn't really do anything
-
-
 `xwords` is the number of words you want to look at. For instance if you put 10, it shows you the top 10 most frequently used words in your chat along with how many times
 
 

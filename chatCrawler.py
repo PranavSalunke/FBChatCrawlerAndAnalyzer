@@ -6,7 +6,6 @@ import fbchat
 from fbchat.models import *
 from fbchat import ThreadType
 import datetime
-import pprint
 import json
 import nltk
 import time
@@ -19,7 +18,7 @@ import random
 # ==========HELPER METHODS==========
 def enterLog(logfileName, message):
     with open(logfileName, "a") as logfile:
-        logfile.write("%s\n" % (message))
+        logfile.write("[%s] %s\n" % (str(datetime.datetime.now()), message))
         print(message)
         logfile.flush()
 
@@ -35,7 +34,6 @@ def localTimeIsUTC():
 
 
 # helper helper method
-
 def getReactionType(message, userid):
     # find coresponding value
     val = message.reactions[userid]
@@ -62,8 +60,7 @@ def getReactionType(message, userid):
 def makeMessageJSON(messsageObj):
     # NOTE: not perfect since some fields have their own class that I'm not taking into consideration
     # reaction originally was a dict with the reactor and the reaction object. now its just a dict with the reactor and the type as a string
-    # attachment is either true or false in the returned dict instead of object
-    # attachment is either true or false in the returned dict instead of object
+    # attachments is just a list of the attachment type
     # some fields will be missing from the original
 
     msg = {}
@@ -76,7 +73,9 @@ def makeMessageJSON(messsageObj):
     msg["read_by"] = messsageObj.read_by  # list
     msg["unsent"] = str(messsageObj.unsent)
 
-    msg["attachments"] = len(messsageObj.attachments) > 0  # if  empty list or not
+    msg["attachments"] = []
+    for attachment in messsageObj.attachments:
+        msg["attachments"].append(getAttachmentType(attachment))
 
     # for reactions, must make the value in the dict not an object
     # ex. MessageReaction.WOW -> WOW
@@ -92,7 +91,7 @@ def makeMessageJSON(messsageObj):
 
 def getAttachmentType(attachment):
     # might not have all possibilities. Returns None if type cant be found
-    aType = None
+    aType = "unknown"
     if isinstance(attachment, fbchat.ShareAttachment):
         aType = "share"
     elif isinstance(attachment, fbchat.Sticker):
@@ -146,7 +145,6 @@ def findTargetId(client, targetChatId, targetChatName):
         exit()
 
     targetObjList = client.searchForThreads(targetChatName)
-    print(targetObjList)
     if len(targetObjList) > 0:
         targetChatId = targetObjList[0].uid
 
@@ -161,7 +159,7 @@ def findTargetId(client, targetChatId, targetChatName):
 def getMessages(client, targetChatId, numberMessages):
     print("Getting %d messages" % (numberMessages))
     getMessagesStart = datetime.datetime.now()
-    chunkSize = 10000
+    chunkSize = 10000  # whole number >= 2
     allmessages = []
     messagesLeft = numberMessages
 
@@ -200,11 +198,134 @@ def getMessages(client, targetChatId, numberMessages):
         setnum += 1
         time.sleep(waittime)  # sleep so facebook server doesnt get suspicious
 
-    print("Got Messages. Reversing list")
+    print("Got Messages. Putting in chronological order")
     allmessages.reverse()
     getMessagesEnd = datetime.datetime.now()
     print("Messages done. Took %s" % (getMessagesEnd-getMessagesStart))
     return allmessages
+
+
+def initTargetData(targetChatName, targetChatId, topXField):
+    targetData = {}
+    targetData["chatName"] = targetChatName
+    targetData["chatID"] = targetChatId
+    targetData["messageCount"] = 0
+    targetData["messages"] = []  # all the messages; raw messages (Message objects from fbchat converted into dicts)
+    targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
+    targetData["attachments"] = {"count": 0, "type": {}, "sharesource": {}}  # total and count per type of attachment. if Share, put source as well
+    targetData["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
+    targetData["timestamps"] = []  # [{timestamp, authorid and name}...]
+    targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
+    targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: count for reactions}
+    targetData[topXField] = []  # [(word, count),...]
+    targetData["wordCount"] = {"count": 0}  # {authorid: {authorname, total words from cleaned string}}; this isn't 100% right
+    return targetData
+
+
+# UPDATE TargetData methods
+def updateAuthors(targetData, authorId, authorName, muid):
+    #  {authorid: {authorid, author name, count, [list of messageIds]}}
+    existingAuthorDict = targetData["authors"].get(authorId)  # returns None if doesnt exist
+    if existingAuthorDict is None:
+        # create new entry
+        targetData["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1}
+        if createMessageIdLists:
+            targetData["authors"][authorId]["msgIdList"] = [muid]
+    else:
+        # update existing entry
+        if createMessageIdLists:
+            targetData["authors"][authorId]["msgIdList"].append(muid)
+        targetData["authors"][authorId]["count"] += 1
+
+
+def updateAttachments(targetData, message):
+    # {"count": 0, "type": {}}  # type of attachment and count per type. if ShareAttachment, put source as well
+    attachmentList = message.attachments
+    for attachment in attachmentList:
+        targetData["attachments"]["count"] += 1
+        attachmentType = getAttachmentType(attachment)
+        # possible types: "share", "sticker", "file", "audio", "image", "video", None (not a string)
+        currcount = targetData["attachments"]["type"].get(attachmentType, 0)  # 0 if its not there so far
+        targetData["attachments"]["type"][attachmentType] = currcount + 1
+
+        if attachmentType == "share":
+            currcount = targetData["attachments"]["sharesource"].get(attachment.source, 0)
+            targetData["attachments"]["sharesource"][attachment.source] = currcount+1
+
+
+def updateUnsent(targetData, message, authorId, authorName, muid):
+    # {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
+    # True/False; only interested if True
+    if message.unsent:
+        targetData["unsent"]["count"] += 1
+
+        # update author count who have unsent
+        currDict = targetData["unsent"]["authors"].get(authorId)  # returns None if doesnt exist
+        if currDict is None:
+            # create new entry
+            targetData["unsent"]["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1}
+            if createMessageIdLists:
+                targetData["unsent"]["authors"][authorId]["msgIdList"] = [muid]
+        else:
+            # update existing
+            if createMessageIdLists:
+                targetData["unsent"]["authors"][authorId]["msgIdList"].append(muid)
+            targetData["unsent"]["authors"][authorId]["count"] += 1
+
+        if createMessageIdLists:
+            targetData["unsent"]["messageIds"].append(muid)
+
+
+def updateMentions(message, targetData, authorId):
+    # {"count":, mentionedID: {count for mentioned, who mentionedID and count}}
+    # mentioned is the one who is being mentioned
+    # mentioner is the one doing the mentioning/author (the one who sent the message)
+
+    mentionsList = message.mentions
+    for mention in mentionsList:
+        mentionedId = mention.thread_id
+        targetData["mentions"]["count"] += 1
+
+        currDict = targetData["mentions"].get(mentionedId)  # None if not in the dict yet
+        if currDict is None:
+            # create new entry
+            targetData["mentions"][mentionedId] = {"count": 1, "mentionedBy": {authorId: 1}}
+        else:
+            # update existing
+            targetData["mentions"][mentionedId]["count"] += 1
+            currcount = targetData["mentions"][mentionedId]["mentionedBy"].get(authorId, 0)  # return 0 if not there
+            targetData["mentions"][mentionedId]["mentionedBy"][authorId] = currcount + 1
+
+
+def updateReactions(targetData, message, frienddict, notFriendNum):
+    # {"count": 0}  {total count, reactions and their count,reactorsID: count for reactions}
+    reactionsDict = message.reactions
+    reactionsDictKeys = reactionsDict.keys()
+    if len(reactionsDictKeys) > 0:  # has reactions. Makes into a list of tuples
+        for reactorid in reactionsDictKeys:
+            targetData["reactions"]["count"] += 1
+            reactiontype = getReactionType(message, reactorid)
+            currcount = targetData["reactions"].get("total" + reactiontype, 0)  # 0 if not there
+            targetData["reactions"]["total" + reactiontype] = currcount + 1
+
+            # how many times has this person made a reaction
+            currDict = targetData["reactions"].get(reactorid)  # none if not there
+            if currDict is None:
+                # make new entry
+                reactorName = frienddict.get(reactorid)
+                if reactorName is None:
+                    frienddict[reactorid] = reactorName = "not_in_friend_list_%d" % (notFriendNum)
+                    notFriendNum += 1
+
+                targetData["reactions"][reactorid] = {"count": 1, reactiontype: 1, "reactorID": reactorid, "reactorName": reactorName}
+            else:
+                # update entry
+                targetData["reactions"][reactorid]["count"] += 1
+                currcount = targetData["reactions"][reactorid].get(reactiontype, 0)
+                targetData["reactions"][reactorid][reactiontype] = currcount + 1
+
+    return notFriendNum
+
 
 # ========END HELPER METHODS=========
 
@@ -220,7 +341,7 @@ class CustomClient(fbchat.Client):
         return tempdict
 
 
-def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists):
+def beginCrawl(outfile, xwords, numberMessages, createMessageIdLists):
     # start the fbchat client
     userEmail = userinfo.email
     userPassword = userinfo.pw
@@ -244,7 +365,6 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
     targetChat = userinfo.targetChat
     targetChatId = targetChat["Id"]
     targetChatName = targetChat["Name"]
-    targetData = {}
 
     # If id is given, use it. if only name is given, find id
     # this only works with one to one chats and not groups
@@ -252,31 +372,22 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
         targetChatId = findTargetId(client, targetChatId, targetChatName)
 
     # init targetData
-    targetData["chatName"] = targetChatName
-    targetData["chatID"] = targetChatId
-    targetData["messageCount"] = 0
-    targetData["messages"] = []  # all the messages; raw messages (Message objects from fbchat converted into dicts)
-    targetData["authors"] = {}  # {authorid: {authorid, author name, count, [list of messageIds]}}
-    targetData["attachments"] = {"count": 0, "type": {}, "sharesource": {}}  # total and count per type of attachment. if Share, put source as well
-    targetData["unsent"] = {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
-    targetData["timestamps"] = []  # [{timestamp, authorid and name}...]
-    targetData["mentions"] = {"count": 0}  # {total count, mentionedID: {count for mentioned, who mentionedID and count}}
-    targetData["reactions"] = {"count": 0}  # {total count, reactions and their count, reactorsID: count for reactions}
-    targetData[topXField] = []  # [(word, count),...]
-    targetData["wordCount"] = {"count": 0}  # {authorid: {authorname, total words from cleaned string}}; this isn't 100% right
+    targetData = initTargetData(targetChatName, targetChatId, topXField)
 
     # fetch a `Thread` object
     thread = client.fetchThreadInfo(targetChatId)[targetChatId]
+    print(thread)
     targetData["messageCount"] = thread.message_count
 
     # begin crawl
-    if numberMessages is None:
-        numberMessages = thread.message_count  # number of messages to get before stopping. Put message_count for all
+    if numberMessages is None:  # read all messages
+        numberMessages = thread.message_count
 
     messages = getMessages(client, targetChatId, numberMessages)
 
     # process every message
-    wordbag = ""
+    wordsDict = {}
+    notFriendNum = 1
     for message in messages:  # process all the messages
         # print(message) # print message object to console
         if message.text is not None:
@@ -288,7 +399,10 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
 
         muid = message.uid
         authorId = message.author  # gives id
-        authorName = frienddict.get(authorId, "not_in_friend_list")
+        authorName = frienddict.get(authorId)  # returns None if not in frienddict
+        if authorName is None:
+            frienddict[authorId] = authorName = "not_in_friend_list_%d" % (notFriendNum)
+            notFriendNum += 1
 
         # ## make Message object JSON serializable
         msgJSON = makeMessageJSON(message)
@@ -296,53 +410,15 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
 
         # ## update authors
         #  {authorid: {authorid, author name, count, [list of messageIds]}}
-        existingAuthorDict = targetData["authors"].get(authorId)  # returns None if doesnt exist
-        if existingAuthorDict is None:
-            # create new entry
-            targetData["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1}
-            if createMessageIdLists:
-                targetData["authors"][authorId]["msgIdList"] = [muid]
-        else:
-            # update existing entry
-            if createMessageIdLists:
-                targetData["authors"][authorId]["msgIdList"].append(muid)
-            targetData["authors"][authorId]["count"] += 1
+        updateAuthors(targetData, authorId, authorName, muid)
 
         # ## update attachments
         # {"count": 0, "type": {}}  # type of attachment and count per type. if ShareAttachment, put source as well
-        attachmentList = message.attachments
-        for attachment in attachmentList:
-            targetData["attachments"]["count"] += 1
-            attachmentType = getAttachmentType(attachment)
-            # possible types: "share", "sticker", "file", "audio", "image", "video", None (not a string)
-            currcount = targetData["attachments"]["type"].get(attachmentType, 0)  # 0 if its not there so far
-            targetData["attachments"]["type"][attachmentType] = currcount + 1
-
-            if attachmentType == "share":
-                currcount = targetData["attachments"]["sharesource"].get(attachment.source, 0)
-                targetData["attachments"]["sharesource"][attachment.source] = currcount+1
+        updateAttachments(targetData, message)
 
         # ## update unsent
         # {"count": 0, "authors": {}, "messageIds": []}  # authors: {author: count}
-        # True/False; only interested if True
-        if message.unsent:
-            targetData["unsent"]["count"] += 1
-
-            # update author count who have unsent
-            currDict = targetData["unsent"]["authors"].get(authorId)  # returns None if doesnt exist
-            if currDict is None:
-                # create new entry
-                targetData["unsent"]["authors"][authorId] = {"authorId": authorId, "authorName": authorName, "count": 1}
-                if createMessageIdLists:
-                    targetData["unsent"]["authors"][authorId]["msgIdList"] = [muid]
-            else:
-                # update existing
-                if createMessageIdLists:
-                    targetData["unsent"]["authors"][authorId]["msgIdList"].append(muid)
-                targetData["unsent"]["authors"][authorId]["count"] += 1
-
-            if createMessageIdLists:
-                targetData["unsent"]["messageIds"].append(muid)
+        updateUnsent(targetData, message, authorId, authorName, muid)
 
         # ## update timetamps
         # [{timestamp, authorid and name}...]
@@ -351,89 +427,39 @@ def beginCrawl(outfile, pprintFile, xwords, numberMessages, createMessageIdLists
 
         # ## update mentions
         # {"count":, mentionedID: {count for mentioned, who mentionedID and count}}
-        # mentioned is the one who is being mentioned
-        # mentioner is the one doing the mentioning/author (the one who sent the message)
-
-        mentionsList = message.mentions
-        for mention in mentionsList:
-            mentionedId = mention.thread_id
-            targetData["mentions"]["count"] += 1
-
-            currDict = targetData["mentions"].get(mentionedId)  # None if not in the dict yet
-            if currDict is None:
-                # create new entry
-                targetData["mentions"][mentionedId] = {"count": 1, "mentionedBy": {authorId: 1}}
-            else:
-                # update existing
-                targetData["mentions"][mentionedId]["count"] += 1
-                currcount = targetData["mentions"][mentionedId]["mentionedBy"].get(authorId, 0)  # return 0 if not there
-                targetData["mentions"][mentionedId]["mentionedBy"][authorId] = currcount + 1
+        updateMentions(message, targetData, authorId)
 
         # ## update reactions
         # {"count": 0}  {total count, reactions and their count,reactorsID: count for reactions}
-        reactionsDict = message.reactions
-        reactionsDictKeys = reactionsDict.keys()
-        if len(reactionsDictKeys) > 0:  # has reactions. Makes into a list of tuples
-            for reactorid in reactionsDictKeys:
-                targetData["reactions"]["count"] += 1
-                reactiontype = getReactionType(message, reactorid)
-                currcount = targetData["reactions"].get("total" + reactiontype, 0)  # 0 if not there
-                targetData["reactions"]["total" + reactiontype] = currcount + 1
-
-                # how many times has this person made a reaction
-                currDict = targetData["reactions"].get(reactorid)  # none if not there
-                if currDict is None:
-                    # make new entry
-                    reactorName = frienddict.get(reactorid, "not_in_friend_list")
-                    targetData["reactions"][reactorid] = {"count": 1, reactiontype: 1, "reactorID": reactorid, "reactorName": reactorName}
-                else:
-                    # update entry
-                    targetData["reactions"][reactorid]["count"] += 1
-                    currcount = targetData["reactions"][reactorid].get(reactiontype, 0)
-                    targetData["reactions"][reactorid][reactiontype] = currcount + 1
+        notFriendNum = updateReactions(targetData, message, frienddict, notFriendNum)
+        # ^ returns the new value for notFriendNum if updated, or returns the same value if not updated
 
         # ## update wordCount
         # {authorid: {authorname, total words from cleaned string}}
-        msgTextClean = msgTextClean.strip().lower()
-        msgWordCount = len(msgTextClean.split())
+        cleanedsplit = msgTextClean.strip().lower().split()  # used in updated x words
+        msgWordCount = len(cleanedsplit)
         targetData["wordCount"]["count"] += msgWordCount
         currDict = targetData["wordCount"].get(authorId)
-        if currDict is None:
-            # create new entry
+        if currDict is None:  # create new entry
             targetData["wordCount"][authorId] = {"authorName": authorName, "count": msgWordCount}
-        else:
-            # update existing
+        else:  # update existing
             targetData["wordCount"][authorId]["count"] += msgWordCount
 
-        # ## update top x words (most complicated if done efficiently)
-        # put all the lines here to process later
-        wordbag += " " + msgTextClean + " "
+        # ## add words and their count to dict as we go; find top X words later
+        for word in cleanedsplit:
+            currcount = wordsDict.get(word, 0)
+            wordsDict[word] = currcount + 1
 
     # ##now find the top X words
-    topX = getTopXWords(wordbag, xwords)
+    # sort the values now. result is a list of tuples
+    sortedlist = sorted(wordsDict.items(), reverse=True, key=lambda pair: pair[1])
+    topX = sortedlist[0:xwords]
     for word in topX:  # populate data with the words
         targetData[topXField].append((word[0], word[1]))
 
-    # ##print out the data (if less than 10000 messages)
-    if numberMessages <= 10000:
-        print("\n\n  |================|")
-        print("  |======DATA======|")
-        print("  V================V\n\n")
-        pprint.pprint(targetData, indent=4)
-
-    print("\n\n===>  written to file %s  <===\n" % (outfile))
+    print("\n\n===>  writting to file %s  <===\n" % (outfile))
     with open(outfile, 'w') as outfile:
         json.dump(targetData, outfile, indent=4)
-
-    # if pprintFile is not None:
-    #     print("\n pprint output sent to %s" % (pprintFile))
-    #     with open(pprintFile, "w") as pprintFileObj:
-    #         # remove all special characters
-    #         pformated = pprint.pformat(targetData)
-    #         pformated = pformated.encode("ascii", "ignore")
-    #         pformated = pformated.decode("ascii")
-    #         # write to file
-    #         pprintFileObj.write(pformated)
 
     client.logout()
 
@@ -443,11 +469,10 @@ starttime = str(datetime.datetime.now())
 
 # SETTINGS
 outfile = "chatdata.json"  # will be overwritten
-pprintFile = "chatdataPPrint.txt"  # None to print to stdout
 createMessageIdLists = False  # to make message id lists for authors and unsent  (If True, json file can get large)
-xwords = 100  # the most common words that arent the common stopwords: https://en.wikipedia.org/wiki/Stop_words
-numberMessages = 100  # None to do all messages
-beginCrawl(outfile=outfile, pprintFile=pprintFile, xwords=xwords, numberMessages=numberMessages, createMessageIdLists=createMessageIdLists)
+xwords = 100  # the most common words that arent stopwords: https://en.wikipedia.org/wiki/Stop_words
+numberMessages = None  # number of messages to get before stopping; None to do all messages
+beginCrawl(outfile=outfile, xwords=xwords, numberMessages=numberMessages, createMessageIdLists=createMessageIdLists)
 
 
 endtime = str(datetime.datetime.now())

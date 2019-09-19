@@ -19,7 +19,7 @@ import random
 def enterLog(logfileName, message):
     with open(logfileName, "a") as logfile:
         logfile.write("[%s] %s\n" % (str(datetime.datetime.now()), message))
-        print(message)
+        # print(message)
         logfile.flush()
 
 
@@ -110,7 +110,7 @@ def getAttachmentType(attachment):
 def cleanStr(line):
     # remove non ascii
     line = line.encode("ascii", "ignore")  # removes non ascii values
-    line = line.decode("ascii")
+    line = line.decode("ascii").lower()
     # remove punctuation
     punctPattern = re.compile('[%s]' % re.escape(string.punctuation))
     line = re.sub(punctPattern, "", line)
@@ -123,19 +123,6 @@ def cleanStr(line):
             cleanedline.append(word)
 
     return " ".join(cleanedline)
-
-
-def getTopXWords(wordbag, xwords):
-    wordsDict = {}
-    cleanedsplit = cleanStr(wordbag).split()
-
-    for word in cleanedsplit:
-        currcount = wordsDict.get(word, 0)
-        wordsDict[word] = currcount + 1
-
-    # sort the values now. result is a list of tuples
-    sortedlist = sorted(wordsDict.items(), reverse=True, key=lambda pair: pair[1])
-    return sortedlist[0:xwords]
 
 
 def findTargetId(client, targetChatId, targetChatName):
@@ -376,7 +363,6 @@ def beginCrawl(outfile, xwords, numberMessages, createMessageIdLists):
 
     # fetch a `Thread` object
     thread = client.fetchThreadInfo(targetChatId)[targetChatId]
-    print(thread)
     targetData["messageCount"] = thread.message_count
 
     # begin crawl
@@ -391,7 +377,7 @@ def beginCrawl(outfile, xwords, numberMessages, createMessageIdLists):
     for message in messages:  # process all the messages
         # print(message) # print message object to console
         if message.text is not None:
-            msgTextOrig = message.text
+            msgTextOrig = (message.text).strip()
             msgTextClean = cleanStr(message.text)  # cleaned
         else:
             msgTextOrig = ""
@@ -436,8 +422,8 @@ def beginCrawl(outfile, xwords, numberMessages, createMessageIdLists):
 
         # ## update wordCount
         # {authorid: {authorname, total words from cleaned string}}
-        cleanedsplit = msgTextClean.strip().lower().split()  # used in updated x words
-        msgWordCount = len(cleanedsplit)
+        msgWordCount = len(msgTextOrig.split())  # use original so stop words are counted
+        # msgWordCount = len(msgTextClean.split())  # stop words not counted
         targetData["wordCount"]["count"] += msgWordCount
         currDict = targetData["wordCount"].get(authorId)
         if currDict is None:  # create new entry
@@ -446,6 +432,7 @@ def beginCrawl(outfile, xwords, numberMessages, createMessageIdLists):
             targetData["wordCount"][authorId]["count"] += msgWordCount
 
         # ## add words and their count to dict as we go; find top X words later
+        cleanedsplit = msgTextClean.split()  # used in updated x words
         for word in cleanedsplit:
             currcount = wordsDict.get(word, 0)
             wordsDict[word] = currcount + 1

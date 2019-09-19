@@ -12,7 +12,7 @@ uid = "UID"  # uid that matches the above info.
 
 # target chat. This is the chat you want to copy/analyze
 # Put None for either if you dont know it
-# Finding Id by name will only work for one to one chats and not groups
+# Finding Id by name will only work if name is given. It is case sensitive
 # will always prefer id
 
 # If you know your friends name but not the id, put the name and None for Id

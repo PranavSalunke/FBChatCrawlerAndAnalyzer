@@ -74,7 +74,7 @@ def getInitials(person):
     return initial
 
 
-def graphWords(topwords, numwords, graphOverall):
+def makeWordsGraph(topwords, numwords, graphOverall):
     # wordlist is a list of tuples
     t = "Top %d words total and by author" % (numwords)
     people = list(topwords.keys())
@@ -169,7 +169,7 @@ def getWordCounts(jsonfile, removeStopWords):
 
 
 # SETTINGS
-jsonfile = "chatdata.json"
+jsonfile = "chatdata_all.json"
 numberwords = 10
 removeStopWords = True  # common words in English like "i", "the", "you", etc
 graphWords = True
@@ -179,4 +179,4 @@ wordcounts = getWordCounts(jsonfile, removeStopWords)
 topwords = getTopWords(wordcounts, numberwords)
 printFormat(topwords)
 if graphWords:
-    graphWords(topwords, numberwords, graphOverall)
+    makeWordsGraph(topwords, numberwords, graphOverall)

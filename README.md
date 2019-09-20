@@ -147,6 +147,9 @@ There are a couple setting variables at the bottom that can be changed in `setti
 
 Does a simple grouped bar graph as well (if `graphWords = True` in settings)
 
+
+NOTE: If you request a number of words but one person hasn't sent that many, the graph will still show a "word", but it is in the form of `<initials#>`. Example: If top 100 works were requested but John Doe has only sent 50, the rest of the words will be shown as `<JD1>`...`<JD50>`
+
 ## Inspiration
 
 

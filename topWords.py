@@ -68,6 +68,10 @@ def printFormat(topwords):
 
 def getInitials(person):
     initial = ""
+
+    if "NOT_IN_FRIEND_LIST" in person or "not_in_friend_list" in person:
+        return "N" + person.split("_")[-1]
+
     for i in person.split():
         initial += i[0]
 
@@ -91,15 +95,16 @@ def makeWordsGraph(topwords, numwords, graphOverall):
     counts = []
     for i, cat in enumerate(cats):
         for person in people:
+            nowordcount = 1
+            initials = getInitials(person)  # will have issues if two people have the same initials and word in a group
 
             try:
                 word, count = topwords[person][i]
             except IndexError:  # person didnt use these many words
-                word, count = ("", 0)
+                word, count = ("<%s%d>" % (initials, nowordcount), 0)
+                nowordcount += 1
 
-            initials = getInitials(person)
             x.append((cat, "%s (%s)" % (initials, word)))
-            # x.append((cat, person))
             counts.append(count)
     # build graph
 

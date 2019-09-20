@@ -2,7 +2,7 @@ import json
 import csv
 import pandas as pd
 import datetime
-import bokeh
+from bokeh.plotting import figure, output_file, show, save
 import matplotlib.pyplot as plt
 import time
 
@@ -54,7 +54,7 @@ def makeTimelinePlotCSV(csvfilename):
 
         # aggregate by time. need to make new data frame
 
-        freq = "T"  # list of times: https://stackoverflow.com/a/17001474
+        freq = "H"  # list of times: https://stackoverflow.com/a/17001474
         # S - second; T- minute; H - hour; D - day; W - week; M - month; A - year; can do 5T for 5 minutes
 
         # total counts
@@ -64,10 +64,13 @@ def makeTimelinePlotCSV(csvfilename):
         # print(msgCountsDF)
 
         # graph it
-        fig, axs = plt.subplots(1, 1)
-        axs.set_title("%s grouped by %s vs counts for all messages" % (timestampCol, freq))
-        plt.plot(msgCountsDF.index, msgCountsDF["Count"])
-        plt.show()
+        t = "%s grouped by %s vs counts for all messages" % (timestampCol, freq)
+        plot = figure(x_axis_type='datetime', plot_width=800, plot_height=500, title=t)
+        plot.xaxis.axis_label = "%s time" % (timestampCol)
+        plot.yaxis.axis_label = "Count"
+        plot.line(x=timestampCol, y=countCol, source=msgCountsDF, line_width=3)
+        show(plot)
+        # note you will have to remove the html files yourself
 
         # counts by author
 

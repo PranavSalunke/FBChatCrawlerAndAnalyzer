@@ -12,6 +12,8 @@ import time
 # uses the json file created by chatCrawler or the csv created by textExtractor
 
 def makeTimelinePlotJSON(jsonfilename):
+    # IN PROGRESS. for now create the csv and use the other methods
+
     tslist = []
     alist = []
     with open(jsonfilename, "r") as chatdatafile:
@@ -25,10 +27,6 @@ def makeTimelinePlotJSON(jsonfilename):
             author = ts["authorName"]
             alist.append(author)
 
-    print(len(tslist))
-
-    # plt.plot(tslist, alist)
-    # plt.show()
 
 # ==================================
 # =========== CSV HELPER ===========
@@ -113,7 +111,7 @@ def graphAuthorsLine(chatmessageDF, timestampCol, freq, graphTotal=False):
     show(plot)
 
 
-def makeTimelinePlotCSV(csvfilename):
+def makeTimelinePlotCSV(csvfilename, freq="H"):
     with open(csvfilename, "r") as chatmessagescsv:
         chatmessageDF = pd.read_csv(chatmessagescsv)
 
@@ -126,9 +124,6 @@ def makeTimelinePlotCSV(csvfilename):
 
         # aggregate by time. need to make new data frame
 
-        freq = "T"  # list of times: https://stackoverflow.com/a/17001474
-        # S - second; T- minute; H - hour; D - day; W - week; M - month; A - year; can do 5T for 5 minutes
-
         # total counts
         timestampCol = "TimestampUTC"
         graphTotalOnlyLine(chatmessageDF, timestampCol, freq)
@@ -137,5 +132,10 @@ def makeTimelinePlotCSV(csvfilename):
         graphAuthorsLine(chatmessageDF, timestampCol, freq, graphTotal=True)
 
 
-makeTimelinePlotCSV("messagetext_100.csv")
+# SETTINGS
+freq = "T"  # list of times: https://stackoverflow.com/a/17001474
+# S - second; T- minute; H - hour; D - day; W - week; M - month; A - year; can do 5T for 5 minutes
+
+
+makeTimelinePlotCSV("messagetext_100.csv", freq)
 # makeTimelinePlotJSON("chatdata_100.json")

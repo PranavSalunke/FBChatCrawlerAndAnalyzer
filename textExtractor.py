@@ -40,15 +40,15 @@ def extract(jsonfilename, outputfilename, csvfilename, printToConsole):
                 justtext.write("[%s] %s  %s (%s)\n%s\n\n" % (messageNumberStr, author, timestamp, humanreadabletime, body))
 
             if csvfilename:
-                # header: "AuthorID", "AuthorName", "Message", "Timestamp"
+                # header: "Number", "AuthorID", "AuthorName", "Message", "Timestamp"
                 body = body.replace("\n", "<<\\n>>")
-                csvrows.append([m["author"], author, body, timestamp])
+                csvrows.append([messageNumber, m["author"], author, body, timestamp])
 
         # make csv file
         if csvfilename:
             with open(csvfilename, "w", newline='') as csvfile:
                 csvwriter = csv.writer(csvfile)
-                header = ["AuthorID", "AuthorName", "Message", "Timestamp"]
+                header = ["Number", "AuthorID", "AuthorName", "Message", "Timestamp"]
                 csvwriter.writerow(header)
                 csvwriter.writerows(csvrows)
 

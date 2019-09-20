@@ -105,7 +105,7 @@ def graphAuthorsLine(chatmessageDF, timestampCol, freq, graphTotal=False):
         msgCountsDF = makeAggregateDF(chatmessageDF, timestampCol, countCol, freq)
         plot.line(x=msgCountsDF.index, y=msgCountsDF[countCol], line_width=2, alpha=0.6, color=color, legend=countCol)
 
-    plot.legend.location = "top_left"
+    plot.legend.location = "top_right"
     plot.legend.click_policy = "hide"
     output_file("plotMessages_Authors.html")
     show(plot)
@@ -137,5 +137,5 @@ freq = "T"  # list of times: https://stackoverflow.com/a/17001474
 # S - second; T- minute; H - hour; D - day; W - week; M - month; A - year; can do 5T for 5 minutes
 
 
-makeTimelinePlotCSV("messagetext_100.csv", freq)
+makeTimelinePlotCSV("messagetext.csv", freq)
 # makeTimelinePlotJSON("chatdata_100.json")

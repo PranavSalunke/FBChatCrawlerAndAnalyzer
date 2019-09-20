@@ -98,11 +98,33 @@ The larger the number of total messages you are trying to get, the more time you
 ## Other functions
 
 
-### chatTextExtractor.py
+### textExtractor.py
 
 
 This script makes a file with the messages in the json file. This is a good way to get a text-only version. A couple settings a the bottom. 
 
+
+### plotMessages.py
+
+This script plots the number of messages in the chat vs time. This is done by grouping the counts into time intervals (given by you). It has a method to plot the total number of messages *and* a method to do it by author/chat member. 
+
+There is one "setting" `freq` which is the frequency of the interval. [All values cay be found here](https://stackoverflow.com/a/17001474). However, the useful ones are here as well:
+
+
+```
+S - second
+T- minute
+H - hour
+D - day
+W - week
+M - month
+A - year
+```
+
+Note that you can do x minute intervals by doing `xT`.
+
+
+The plots will be made as html files that will automatically open in your browser. They are interactive and you can play around with the data. The legend is clickable so that it hides different authors so you can get a better view of the others. 
 
 ## Inspiration
 

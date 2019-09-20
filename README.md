@@ -126,7 +126,21 @@ Note that you can do x minute intervals by doing `xT`.
 
 The plots will be made as html files that will automatically open in your browser. They are interactive and you can play around with the data. The legend is clickable so that it hides different authors so you can get a better view of the others. 
 
+
+# topWords.py
+
+
+Prints the most frequently used words to the console. 
+
+
+This does a similar thing to the `topXwords` in the crawler. This file works on the json created by `chatCrawler`. This allows you to find the top X words *after* you have created the json file. This also allows you to find the top words a particular person has used as well as the top words from the entire chat history. 
+
+
+There are a couple setting variables at the bottom 
+
+
 ## Inspiration
+
 
 I am in some chats that have a LOT of messages and I wanted to know how many messages we had. But I also wanted to know who sent the most messages, what topics came up most (word count), ect. Some of the things I kept track of like mentions and reactions, only happened once I looked at what was available to me via the fbchat API.
 

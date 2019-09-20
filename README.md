@@ -1,5 +1,25 @@
 #  Facebook Messenger/Chat Crawler
 
+
+## Table of contents
+
+* [Intro](#intro)
+* [Details](#details)
+    * [Modifications needed for you to use this](#modifications-needed-for-you-to-use-this)
+    * [Output](#output)
+    * [Running the program](#running-the-program)
+    * [Basic Structure](#basic-structure)
+    * [Many Messages](#many-messages)
+* [Other functions](#other-functions)
+    * [settings.py](#settingspy)
+    * [textExtractor.py](#textextractorpy)
+    * [plotMessages.py](#plotmessagespy)
+    * [topWords.py](#topwordspy)
+* [Inspiration](#inspiratoin)
+
+
+
+## Intro
 First and foremost, I as the programmer can not have access to your Facebook information via this project. Anything this code produces is only on your local computer as a file.
 
 
@@ -133,7 +153,7 @@ The plots will be made as html files that will automatically open in your browse
 
 Setings can be changed in `settings.py`
 
-# topWords.py
+### topWords.py
 
 
 Prints the most frequently used words to the console. 

@@ -98,10 +98,14 @@ The larger the number of total messages you are trying to get, the more time you
 ## Other functions
 
 
+### settings.py
+
+All the settings in one place! Each of the python files have variable that you can change for it to do exactly what you want. In order to make it easier, I have put it all in one file. All you have to do is change it there! No need to ever look at any of the other one (unless you want to of course).
+
 ### textExtractor.py
 
 
-This script makes a file with the messages in the json file. This is a good way to get a text-only version. A couple settings a the bottom. 
+This script makes a file with the messages in the json file. This is a good way to get a text-only version. A couple settings a the bottom that can be changed in `settings.py`
 
 
 ### plotMessages.py
@@ -127,6 +131,8 @@ Note that you can do x minute intervals by doing `xT`.
 The plots will be made as html files that will automatically open in your browser. They are interactive and you can play around with the data. The legend is clickable so that it hides different authors so you can get a better view of the others. 
 
 
+Setings can be changed in `settings.py`
+
 # topWords.py
 
 
@@ -136,8 +142,10 @@ Prints the most frequently used words to the console.
 This does a similar thing to the `topXwords` in the crawler. This file works on the json created by `chatCrawler`. This allows you to find the top X words *after* you have created the json file. This also allows you to find the top words a particular person has used as well as the top words from the entire chat history. 
 
 
-There are a couple setting variables at the bottom 
+There are a couple setting variables at the bottom that can be changed in `settings.py`
 
+
+Does a simple grouped bar graph as well (if `graphWords = True` in settings)
 
 ## Inspiration
 

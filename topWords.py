@@ -5,7 +5,12 @@ import json
 import re
 import string
 import nltk
-import bokeh
+from bokeh.plotting import figure, show
+from bokeh.core.properties import value
+from bokeh.models import ColumnDataSource, FactorRange, Legend
+from bokeh.palettes import Category10, Plasma256
+from bokeh.transform import factor_cmap
+
 
 def cleanLine(line, removeStopWords):
 
@@ -30,9 +35,10 @@ def cleanLine(line, removeStopWords):
 
     return line
 
+
 def printFormat(topwords):
     # prints in a better format to the console
-    # call after getTopWords and pass in the output 
+    # call after getTopWords and pass in the output
 
     # find longest word
     mostletters = 0
@@ -44,15 +50,15 @@ def printFormat(topwords):
 
     wordpad = mostletters
     countpad = len(str(highestcount))
-    segmentlen = wordpad + countpad + 5 # segemnt: "| [wordpad] [countpad] |""
+    segmentlen = wordpad + countpad + 5  # segemnt: "| [wordpad] [countpad] |""
 
     for person in topwords:
-        print("%s-"%(person.upper()))
+        print("%s-" % (person.upper()))
         charcount = 0
-        for word, count in topwords[person]:  
-            word = word.zfill(wordpad).replace("0"," ")
+        for word, count in topwords[person]:
+            word = word.zfill(wordpad).replace("0", " ")
             count = str(count).zfill(countpad)
-            print("| %s %s "%(word, count),end="")
+            print("| %s %s " % (word, count), end="")
             charcount += segmentlen
             if charcount >= 100:
                 print("|")
@@ -60,10 +66,60 @@ def printFormat(topwords):
         print("|")
 
 
+def getInitials(person):
+    initial = ""
+    for i in person.split():
+        initial += i[0]
 
-def graphWords(topwords):
+    return initial
+
+
+def graphWords(topwords, numwords, graphOverall):
     # wordlist is a list of tuples
-    pass
+    t = "Top %d words total and by author" % (numwords)
+    people = list(topwords.keys())
+    if not graphOverall:
+        people.remove("Overall Count")
+
+    # create category labels (top 1, top 2,...)
+    cats = []
+    for i in range(1, numberwords+1):
+        cats.append("top %d" % (i))
+
+    # format x axis and counts:
+    x = []
+    counts = []
+    for i, cat in enumerate(cats):
+        for person in people:
+
+            try:
+                word, count = topwords[person][i]
+            except IndexError:  # person didnt use these many words
+                word, count = ("", 0)
+
+            initials = getInitials(person)
+            x.append((cat, "%s (%s)" % (initials, word)))
+            # x.append((cat, person))
+            counts.append(count)
+    # build graph
+
+    source = ColumnDataSource(data=dict(x=x, counts=counts, people=people*numberwords))
+    nump = len(people)
+    baseColorsToUse = Category10[nump] if nump <= 10 else Plasma256[nump]
+    colorsToUse = baseColorsToUse*numberwords  # repeat the colors for the top X words
+
+    plot = figure(x_range=FactorRange(*x), plot_width=1000, plot_height=600, title=t)
+    fc = factor_cmap('x', palette=colorsToUse, factors=x)
+    plot.vbar(x='x', top='counts', width=0.9, source=source, fill_color=fc, legend="people")
+
+    plot.xaxis.axis_label = "Person Initials (word) by top x grouping"
+    plot.yaxis.axis_label = "Count how many times the (word) was used"
+    plot.y_range.start = 0
+    plot.x_range.range_padding = 0.1
+    plot.xaxis.major_label_orientation = 1
+    plot.xgrid.grid_line_color = None
+    show(plot)
+
 
 def getTopWords(wordCount, topx):
     # call after getWordCounts and pass in the output as wordCount
@@ -80,10 +136,8 @@ def getTopWords(wordCount, topx):
     return topwords
 
 
-
-
-def getWordCounts(jsonfile,removeStopWords):
-    wordCount = {"overallCount":{}} # word: count... person name: {word: count}.. 
+def getWordCounts(jsonfile, removeStopWords):
+    wordCount = {"Overall Count": {}}  # word: count... person name: {word: count}..
     chatdata = None
     with open(jsonfile, "r") as jsonfile:
         chatdata = json.load(jsonfile)
@@ -106,20 +160,23 @@ def getWordCounts(jsonfile,removeStopWords):
 
         for word in bodywords:
             # update chat wide counts
-            wordCount["overallCount"][word] = wordCount["overallCount"].get(word,0) + 1
+            wordCount["Overall Count"][word] = wordCount["Overall Count"].get(word, 0) + 1
 
             # update count for author
-            wordCount[authorName][word] = wordCount[authorName].get(word,0) + 1
+            wordCount[authorName][word] = wordCount[authorName].get(word, 0) + 1
 
     return wordCount
 
 
 # SETTINGS
 jsonfile = "chatdata.json"
-numberwords = 15
-removeStopWords = True # common words in English like "i", "the", "you", etc
+numberwords = 10
+removeStopWords = True  # common words in English like "i", "the", "you", etc
+graphWords = True
+graphOverall = False  # only matters if graphWords = True
 
-wordcounts = getWordCounts(jsonfile,removeStopWords)
+wordcounts = getWordCounts(jsonfile, removeStopWords)
 topwords = getTopWords(wordcounts, numberwords)
 printFormat(topwords)
-graphWords(topwords)
+if graphWords:
+    graphWords(topwords, numberwords, graphOverall)

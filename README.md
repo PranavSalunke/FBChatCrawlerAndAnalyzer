@@ -15,6 +15,7 @@
     * [textExtractor.py](#textextractorpy)
     * [plotMessages.py](#plotmessagespy)
     * [topWords.py](#topwordspy)
+    * [doubleMsg.py](#doublemsgpy)
 * [Inspiration](#inspiratoin)
 
 
@@ -122,6 +123,8 @@ The larger the number of total messages you are trying to get, the more time you
 
 All the settings in one place! Each of the python files have variable that you can change for it to do exactly what you want. In order to make it easier, I have put it all in one file. All you have to do is change it there! No need to ever look at any of the other one (unless you want to of course).
 
+_NOTE: File is present, but not implemented yet. For now, each file's settings (variables) must be changed at the bottom where the settings are indicated with a comment saying `#SETTINGS`_
+
 ### textExtractor.py
 
 
@@ -151,7 +154,7 @@ Note that you can do x minute intervals by doing `xT`.
 The plots will be made as html files that will automatically open in your browser. They are interactive and you can play around with the data. The legend is clickable so that it hides different authors so you can get a better view of the others. 
 
 
-Setings can be changed in `settings.py`
+Settings can be changed in `settings.py`
 
 ### topWords.py
 
@@ -169,6 +172,28 @@ Does a simple grouped bar graph as well (if `graphWords = True` in settings)
 
 
 NOTE: If you request a number of words but one person hasn't sent that many, the graph will still show a "word", but it is in the form of `<initials#>`. Example: If top 100 works were requested but John Doe has only sent 50, the rest of the words will be shown as `<JD1>`...`<JD50>`
+
+
+### doubleMsg.py
+
+Counts now many times each person "double messaged" and creates a graph.
+
+A double message is when the same person messages a chat after a period of time. 
+
+
+Example:
+
+```
+Person1: hi
+person2: hello
+X minutes later
+person2: anyway what did you want?
+```
+
+
+The settings for this file are just the json file to read from, whether to create the graph, and the value for `X` in minutes. For decent results, keep `X` above 5 minutes. 
+
+Settings can be changed in `settings.py`
 
 ## Inspiration
 

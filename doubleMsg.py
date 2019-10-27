@@ -63,6 +63,5 @@ minCutOff = 5  # The threshold for a double message in minutes
 createGraph = True
 
 doubleMsgs = calculateDoubleMsg(jsonfile, minCutOff)
-print(doubleMsgs)
 if createGraph:
     graphDoubleMsgs(doubleMsgs)

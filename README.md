@@ -1,7 +1,7 @@
-#  Facebook Messenger/Chat Crawler
+#  Facebook Messenger/Chat Crawler and Analyzer
 
 
-## Table of contents
+## Table of Contents
 
 * [Intro](#intro)
 * [Details](#details)

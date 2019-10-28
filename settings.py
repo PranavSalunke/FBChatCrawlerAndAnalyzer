@@ -2,7 +2,8 @@
 # look for the file you want to change the setting for, change it, save this file, and run that program
 
 
-#  NOTE: THIS IS NOT IMPLEMENTED YET. You have to change the seetings in the individual files for now
+#  NOTE: USING THIS IS NOT IMPLEMENTED YET.
+# You have to change the seetings in the individual files for now
 
 
 # chatCrawler.py

@@ -16,7 +16,7 @@
     * [plotMessages.py](#plotmessagespy)
     * [topWords.py](#topwordspy)
     * [doubleMsg.py](#doublemsgpy)
-* [Inspiration](#inspiratoin)
+* [Inspiration](#inspiration)
 
 
 

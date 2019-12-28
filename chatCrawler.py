@@ -1,4 +1,4 @@
-# self made crawler to copy/download a partiular chat and gather some data about it
+# self made crawler to copy/download a particular chat and gather some data about it
 # creates a json file with data about the chat
 
 import userinfo
